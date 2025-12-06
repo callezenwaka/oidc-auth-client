@@ -1,0 +1,126 @@
+flowchart TB
+    subgraph "Original Structure"
+        OidcClient["OidcClient.js"]
+        UserManager["UserManager.js"]
+        OidcSettings["OidcClientSettings.js"]
+        UserSettings["UserManagerSettings.js"]
+        Event["Event.js"]
+        AccessTokenEvents["AccessTokenEvents.js"]
+        UserEvents["UserManagerEvents.js"]
+        State["State.js"]
+        SigninState["SigninState.js"]
+        SessionMonitor["SessionMonitor.js"]
+        SilentRenew["SilentRenewService.js"]
+        SigninReq["SigninRequest.js"]
+        SignoutReq["SignoutRequest.js"]
+        SigninResp["SigninResponse.js"]
+        SignoutResp["SignoutResponse.js"]
+        ErrorResp["ErrorResponse.js"]
+        ResponseVal["ResponseValidator.js"]
+        TokenClient["TokenClient.js"]
+        TokenRevocation["TokenRevocationClient.js"]
+        UserInfo["UserInfoService.js"]
+        RedirectNav["RedirectNavigator.js"]
+        PopupNav["PopupNavigator.js"]
+        IFrameNav["IFrameNavigator.js"]
+        CordovaPopup["CordovaPopupNavigator.js"]
+        CordovaIFrame["CordovaIFrameNavigator.js"]
+        PopupWin["PopupWindow.js"]
+        IFrameWin["IFrameWindow.js"]
+        CordovaWin["CordovaPopupWindow.js"]
+        CheckSession["CheckSessionIFrame.js"]
+        WebStorage["WebStorageStateStore.js"]
+        InMemory["InMemoryWebStorage.js"]
+        JoseUtil["JoseUtil.js"]
+        JoseImpl["JoseUtilImpl.js"]
+        JoseRsa["JoseUtilRsa.js"]
+        Random["random.js"]
+        JsonService["JsonService.js"]
+        MetaService["MetadataService.js"]
+        UrlUtil["UrlUtility.js"]
+        Timer["Timer.js"]
+        ClockService["ClockService.js"]
+        Global["Global.js"]
+        User["User.js"]
+        Log["Log.js"]
+    end
+
+    subgraph "Consolidated Structure"
+        ClientJs["auth/Client.js"]
+        SettingsJs["auth/Settings.js"]
+        EventsJs["auth/Events.js"]
+        SessionJs["auth/Session.js"]
+        RequestsJs["protocol/Requests.js"]
+        ResponsesJs["protocol/Responses.js"]
+        ValidatorJs["protocol/ResponseValidator.js"]
+        TokenJs["protocol/TokenService.js"]
+        NavJs["navigation/Navigator.js"]
+        StorageJs["storage/Storage.js"]
+        CryptoJs["crypto/Crypto.js"]
+        ModelJs["models/User.js"]
+        LogJs["utils/Log.js"]
+        HttpJs["utils/Http.js"]
+        TimerJs["utils/Timer.js"]
+    end
+
+    %% Auth Module
+    OidcClient --> ClientJs
+    UserManager --> ClientJs
+    OidcSettings --> SettingsJs
+    UserSettings --> SettingsJs
+    Event --> EventsJs
+    AccessTokenEvents --> EventsJs
+    UserEvents --> EventsJs
+    State --> SessionJs
+    SigninState --> SessionJs
+    SessionMonitor --> SessionJs
+    SilentRenew --> SessionJs
+
+    %% Protocol Module
+    SigninReq --> RequestsJs
+    SignoutReq --> RequestsJs
+    SigninResp --> ResponsesJs
+    SignoutResp --> ResponsesJs
+    ErrorResp --> ResponsesJs
+    ResponseVal --> ValidatorJs
+    TokenClient --> TokenJs
+    TokenRevocation --> TokenJs
+    UserInfo --> TokenJs
+
+    %% Navigation Module
+    RedirectNav --> NavJs
+    PopupNav --> NavJs
+    IFrameNav --> NavJs
+    CordovaPopup --> NavJs
+    CordovaIFrame --> NavJs
+    PopupWin --> NavJs
+    IFrameWin --> NavJs
+    CordovaWin --> NavJs
+    CheckSession --> NavJs
+
+    %% Storage Module
+    WebStorage --> StorageJs
+    InMemory --> StorageJs
+
+    %% Crypto Module
+    JoseUtil --> CryptoJs
+    JoseImpl --> CryptoJs
+    JoseRsa --> CryptoJs
+    Random --> CryptoJs
+
+    %% Models Module
+    User --> ModelJs
+
+    %% Utils Module
+    Log --> LogJs
+    JsonService --> HttpJs
+    MetaService --> HttpJs
+    UrlUtil --> HttpJs
+    Timer --> TimerJs
+    ClockService --> TimerJs
+    Global --> TimerJs
+
+    classDef original fill:#ffcccb,stroke:#ff6666
+    classDef consolidated fill:#90ee90,stroke:#006400
+    class OidcClient,UserManager,OidcSettings,UserSettings,Event,AccessTokenEvents,UserEvents,State,SigninState,SessionMonitor,SilentRenew,SigninReq,SignoutReq,SigninResp,SignoutResp,ErrorResp,ResponseVal,TokenClient,TokenRevocation,UserInfo,RedirectNav,PopupNav,IFrameNav,CordovaPopup,CordovaIFrame,PopupWin,IFrameWin,CordovaWin,CheckSession,WebStorage,InMemory,JoseUtil,JoseImpl,JoseRsa,Random,JsonService,MetaService,UrlUtil,Timer,ClockService,Global,User,Log original
+    class ClientJs,SettingsJs,EventsJs,SessionJs,RequestsJs,ResponsesJs,ValidatorJs,TokenJs,NavJs,StorageJs,CryptoJs,ModelJs,LogJs,HttpJs,TimerJs consolidated
