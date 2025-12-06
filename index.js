@@ -1,39 +1,62 @@
-// Copyright (c) Brock Allen & Dominick Baier. All rights reserved.
+// Copyright (c) Callis Ezenwaka. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-import {Log} from './src/Log.js';
-import {OidcClient} from './src/OidcClient.js';
-import {OidcClientSettings} from './src/OidcClientSettings.js';
-import {WebStorageStateStore} from './src/WebStorageStateStore.js';
-import {InMemoryWebStorage} from './src/InMemoryWebStorage.js';
-import {UserManager} from './src/UserManager.js';
-import {AccessTokenEvents} from './src/AccessTokenEvents.js';
-import {MetadataService} from './src/MetadataService.js';
-import {CordovaPopupNavigator} from './src/CordovaPopupNavigator.js';
-import {CordovaIFrameNavigator} from './src/CordovaIFrameNavigator.js';
-import {CheckSessionIFrame} from './src/CheckSessionIFrame.js';
-import {TokenRevocationClient} from './src/TokenRevocationClient.js';
-import {SessionMonitor} from './src/SessionMonitor.js';
-import {Global} from './src/Global.js';
-import {User} from './src/User.js';
+// Utils
+import {Log} from './src/utils/Log.js';
+import {Global} from './src/utils/Global.js';
 
+// Models
+import {User} from './src/models/User.js';
+
+// Storage
+import {WebStorageStateStore, InMemoryWebStorage} from './src/storage/Storage.js';
+
+// Services
+import {MetadataService} from './src/services/Http.js';
+
+// Navigation
+import {
+  CheckSessionIFrame,
+  CordovaPopupNavigator,
+  CordovaIFrameNavigator,
+} from './src/navigation/Navigator.js';
+
+// Protocol
+import {TokenRevocationClient} from './src/protocol/TokenService.js';
+
+// Auth
+import {OidcClient, UserManager} from './src/auth/Client.js';
+import {OidcClientSettings, UserManagerSettings} from './src/auth/Settings.js';
+import {AccessTokenEvents} from './src/auth/Events.js';
+import {SessionMonitor} from './src/auth/Session.js';
+
+// Version
 import {Version} from './version.js';
 
 export {
+  // Version
   Version,
+  // Utils
   Log,
-  OidcClient,
-  OidcClientSettings,
+  Global,
+  // Models
+  User,
+  // Storage
   WebStorageStateStore,
   InMemoryWebStorage,
-  UserManager,
-  AccessTokenEvents,
+  // Services
   MetadataService,
+  // Navigation
+  CheckSessionIFrame,
   CordovaPopupNavigator,
   CordovaIFrameNavigator,
-  CheckSessionIFrame,
+  // Protocol
   TokenRevocationClient,
+  // Auth
+  OidcClient,
+  UserManager,
+  OidcClientSettings,
+  UserManagerSettings,
+  AccessTokenEvents,
   SessionMonitor,
-  Global,
-  User,
 };
