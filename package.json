@@ -1,0 +1,73 @@
+{
+  "name": "oidc-client",
+  "version": "1.11.5",
+  "description": "OpenID Connect (OIDC) and OAuth 2.0 client library for JavaScript applications - Consolidated & Refactored",
+  "license": "Apache-2.0",
+  "author": {
+    "name": "Callis Ezenwaka",
+    "email": "callisezenwaka@outlook.com"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "type": "module",
+  "main": "index.js",
+  "types": "src/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/types/index.d.ts",
+      "import": "./index.js"
+    },
+    "./auth": "./src/auth/Client.js",
+    "./protocol": "./src/protocol/TokenService.js",
+    "./storage": "./src/storage/Storage.js",
+    "./utils": "./src/utils/Log.js"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "base64-js": "^1.5.1",
+    "crypto-js": "^4.2.0",
+    "jsbn": "^1.1.0",
+    "jsdom": "^27.2.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.15",
+    "vitest": "^4.0.15"
+  },
+  "keywords": [
+    "oidc",
+    "openid-connect",
+    "oauth2",
+    "authentication",
+    "authorization",
+    "jwt",
+    "identity",
+    "sso",
+    "single-sign-on",
+    "pkce",
+    "implicit-flow",
+    "authorization-code",
+    "javascript",
+    "browser",
+    "client"
+  ],
+  "homepage": "https://github.com/callezenwaka/oidc-client#readme",
+  "bugs": {
+    "url": "https://github.com/callezenwaka/oidc-client/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callezenwaka/oidc-client.git"
+  },
+  "files": [
+    "src/",
+    "index.js",
+    "version.js",
+    "README.md",
+    "LICENSE"
+  ]
+}

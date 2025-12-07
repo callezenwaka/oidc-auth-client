@@ -1,0 +1,18 @@
+.api-test-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.api-test-page h4 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.api-test-page pre {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  max-height: 400px;
+}
