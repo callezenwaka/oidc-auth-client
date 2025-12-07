@@ -1,0 +1,59 @@
+.home {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.home h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.home .subtitle {
+  font-size: 1.2rem;
+  color: #7f8c8d;
+  margin-bottom: 2rem;
+}
+
+.home .card ol {
+  margin-left: 1.5rem;
+}
+
+.home .card li {
+  margin-bottom: 0.5rem;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.feature-card h4 {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.feature-card p {
+  color: #7f8c8d;
+}
+
+.cta {
+  text-align: center;
+  margin: 3rem 0;
+}
+
+.cta p {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}

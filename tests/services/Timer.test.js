@@ -6,6 +6,8 @@ describe('services/Timer', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // Initialize the fake clock to a known time for predictable expiration checks
+    vi.setSystemTime(new Date(2025, 11, 6, 10, 0, 0)); 
     timer = new Timer('test-timer');
   });
 
@@ -44,12 +46,28 @@ describe('services/Timer', () => {
     expect(expiration1).toBe(expiration2);
   });
 
-  it('should fire callback when timer expires', (done) => {
-    timer.addHandler(() => {
-      done();
+  it('should fire callback when timer expires', async () => {
+    // Return a Promise instead of using the deprecated done() callback.
+    // Convert to async and use advanceTimersByTime to trigger expiration instantly.
+    
+    // Setup the promise to wait for the handler
+    const promise = new Promise((resolve) => {
+      timer.addHandler(() => {
+        resolve(); // Resolves the promise when the timer event fires.
+      });
     });
-    timer.init(1);
-    vi.advanceTimersByTime(2000);
+    
+    // Start the timer for 1 second.
+    timer.init(1); 
+    
+    // INSTANTLY advance the clock past the 1-second expiration.
+    // The Timer's internal check is 'this._expiration <= this.now'.
+    // We advance 1 second (1000ms) plus a bit extra (e.g., 100ms) to ensure the 
+    // internal interval has a chance to fire and check the expiration time.
+    vi.advanceTimersByTime(1100); 
+
+    // Wait for the promise to resolve, confirming the event fired.
+    await promise;
   });
 
   it('should get current time', () => {

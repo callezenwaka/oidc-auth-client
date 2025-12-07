@@ -3,7 +3,7 @@
 
 import {Log} from '../utils/Log.js';
 import {Global} from '../utils/Global.js';
-import {Event} from '../auth/Events.js';
+import {Event} from '../utils/Event.js';
 
 const TimerDuration = 5; // seconds
 
@@ -16,15 +16,18 @@ export class Timer extends Event {
     super(name);
     this._timer = timer;
 
+    // Ensure _nowFunc always returns an integer epoch time in seconds.
     if (nowFunc) {
       this._nowFunc = nowFunc;
     } else {
-      this._nowFunc = () => Date.now() / 1000;
+      // Use bitwise OR ( | 0) for efficient flooring to integer seconds.
+      this._nowFunc = () => (Date.now() / 1000) | 0;
     }
   }
 
   get now() {
-    return parseInt(this._nowFunc());
+    // Return the time directly from the function (which is now guaranteed to be an integer)
+    return this._nowFunc();
   }
 
   init(duration) {

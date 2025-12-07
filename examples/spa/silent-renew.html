@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Silent Renew</title>
+</head>
+<body>
+  <script type="module">
+    // Import OIDC Client Library
+    import { UserManager } from '../../index.js';
+
+    // Process silent renew callback
+    new UserManager({ response_type: 'code' })
+      .signinSilentCallback()
+      .then(() => {
+        console.log('Silent renew successful');
+      })
+      .catch((error) => {
+        console.error('Silent renew error:', error);
+      });
+  </script>
+</body>
+</html>

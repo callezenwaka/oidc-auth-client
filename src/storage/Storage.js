@@ -71,7 +71,11 @@ export class InMemoryWebStorage {
 
   getItem(key) {
     Log.debug('InMemoryWebStorage.getItem', key);
-    return this._data[key];
+    // Explicitly check for the key and return null if missing
+    if (Object.prototype.hasOwnProperty.call(this._data, key)) {
+      return this._data[key];
+    }
+    return null;
   }
 
   setItem(key, value) {
@@ -89,6 +93,12 @@ export class InMemoryWebStorage {
   }
 
   key(index) {
-    return Object.getOwnPropertyNames(this._data)[index];
+    const keys = Object.getOwnPropertyNames(this._data);
+    
+    // Check index bound and return null if invalid
+    if (index >= 0 && index < keys.length) {
+      return keys[index];
+    }
+    return null; 
   }
 }

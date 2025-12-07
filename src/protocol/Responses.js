@@ -95,9 +95,21 @@ export class ErrorResponse extends Error {
       throw new Error('error');
     }
 
-    super(error_description || error);
+    /**
+     * Set the base Error message to include BOTH the error code 
+     * and the description for better context, matching standard practice.
+     */
+    const message = error_description 
+      ? `${error}: ${error_description}` 
+      : error;
+    
+    super(message);
 
-    this.name = 'ErrorResponse';
+    /**
+     * Set the standard Error.name property to the OAuth error code, 
+     * instead of the static class name 'ErrorResponse'.
+     */
+    this.name = error;
 
     this.error = error;
     this.error_description = error_description;

@@ -36,7 +36,8 @@ export class Log {
 
   static reset() {
     level = INFO;
-    logger = nopLogger;
+    // logger = nopLogger;
+    logger = console; // default to console for now
   }
 
   static get level() {

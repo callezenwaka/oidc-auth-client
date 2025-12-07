@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Event, AccessTokenEvents, UserManagerEvents } from '../../src/auth/Events.js';
+import { Event } from '../../src/utils/Event.js';
+import { AccessTokenEvents, UserManagerEvents } from '../../src/auth/Events.js';
 
 describe('auth/Event', () => {
   let event;

@@ -53,10 +53,14 @@ describe('Consolidated Module Imports', () => {
   });
 
   it('should import from auth/Events.js', async () => {
-    const { Event, AccessTokenEvents, UserManagerEvents } = await import('../src/auth/Events.js');
-    expect(Event).toBeDefined();
+    const { AccessTokenEvents, UserManagerEvents } = await import('../src/auth/Events.js');
     expect(AccessTokenEvents).toBeDefined();
     expect(UserManagerEvents).toBeDefined();
+  });
+
+  it('should import from utils/Event.js', async () => {
+    const { Event } = await import('../src/utils/Event.js');
+    expect(Event).toBeDefined();
   });
 
   it('should import from auth/Session.js', async () => {
