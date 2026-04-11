@@ -1,18 +1,18 @@
 {
-  "name": "oidc-client",
-  "version": "1.11.5",
+  "name": "oidc-auth-client",
+  "version": "0.0.0",
   "description": "OpenID Connect (OIDC) and OAuth 2.0 client library for JavaScript applications - Consolidated & Refactored",
-  "license": "Apache-2.0",
-  "author": {
-    "name": "Callis Ezenwaka",
-    "email": "callisezenwaka@outlook.com"
-  },
   "engines": {
     "node": ">=20.9.0"
   },
   "type": "module",
   "main": "index.js",
   "types": "src/types/index.d.ts",
+  "scripts": {
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage"
+  },
   "exports": {
     ".": {
       "types": "./src/types/index.d.ts",
@@ -23,11 +23,13 @@
     "./storage": "./src/storage/Storage.js",
     "./utils": "./src/utils/Log.js"
   },
-  "scripts": {
-    "test": "vitest",
-    "test:watch": "vitest --watch",
-    "test:coverage": "vitest run --coverage"
-  },
+  "files": [
+    "src/",
+    "index.js",
+    "version.js",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "base64-js": "^1.5.1",
     "crypto-js": "^4.2.0",
@@ -63,11 +65,9 @@
     "type": "git",
     "url": "git+https://github.com/callezenwaka/oidc-client.git"
   },
-  "files": [
-    "src/",
-    "index.js",
-    "version.js",
-    "README.md",
-    "LICENSE"
-  ]
+  "author": {
+    "name": "Callis Ezenwaka",
+    "email": "callisezenwaka@outlook.com"
+  },
+  "license": "Apache-2.0"
 }

@@ -3,8 +3,7 @@
 
 import {Log} from '../utils/Log.js';
 import {UrlUtility} from '../services/Http.js';
-import {SigninState} from '../bin/SigninState.js'; // TODO: Will update to auth/Session.js later
-import {State} from '../bin/State.js'; // TODO: Will update to auth/Session.js later
+import {SigninState, State} from '../auth/Session.js';
 
 //=============================================================================
 // SigninRequest - Authorization request builder

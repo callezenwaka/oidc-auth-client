@@ -30,12 +30,7 @@ import {OidcClientSettings, UserManagerSettings} from './src/auth/Settings.js';
 import {AccessTokenEvents} from './src/auth/Events.js';
 import {SessionMonitor} from './src/auth/Session.js';
 
-// Version
-import {Version} from './version.js';
-
 export {
-  // Version
-  Version,
   // Utils
   Log,
   Global,

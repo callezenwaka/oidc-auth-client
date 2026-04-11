@@ -4,9 +4,6 @@ describe('Public API Imports', () => {
   it('should export all public APIs from index.js', async () => {
     const module = await import('../index.js');
 
-    // Version
-    expect(module.Version).toBeDefined();
-
     // Utils
     expect(module.Log).toBeDefined();
     expect(module.Global).toBeDefined();
