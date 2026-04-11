@@ -81,7 +81,7 @@ export class SigninRequest {
     url = UrlUtility.addQueryParam(url, 'state', this.state.id);
 
     if (oidc) {
-      url = UrlUtility.addQueryParam(url, 'nonce', this.state.nonce);
+      url = UrlUtility.addQueryParam(url, 'nonce', this.state.nonce!);
     }
     if (code) {
       url = UrlUtility.addQueryParam(url, 'code_challenge', this.state.code_challenge!);

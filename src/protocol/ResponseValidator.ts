@@ -18,7 +18,7 @@ export interface ValidatorSettings {
   clockSkew?: number;
   loadUserInfo?: boolean;
   mergeClaims?: boolean;
-  _filterProtocolClaims?: boolean;
+  filterProtocolClaims?: boolean;
   getEpochTime(): Promise<number>;
   [key: string]: any;
 }
@@ -182,7 +182,7 @@ export class ResponseValidator {
   private _filterProtocolClaims(claims: any): any {
     Log.debug('ResponseValidator._filterProtocolClaims, incoming claims:', claims);
     const result = Object.assign({}, claims);
-    if (this._settings._filterProtocolClaims) {
+    if (this._settings.filterProtocolClaims) {
       ProtocolClaims.forEach(type => delete result[type]);
       Log.debug('ResponseValidator._filterProtocolClaims: protocol claims filtered', result);
     } else {

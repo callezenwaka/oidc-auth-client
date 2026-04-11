@@ -12,7 +12,7 @@ export interface TokenSettings {
   client_id?: string;
   client_secret?: string;
   redirect_uri?: string;
-  _client_authentication?: string;
+  client_authentication?: string;
   userInfoJwtIssuer?: string;
   clockSkew?: number;
   [key: string]: any;
@@ -46,7 +46,7 @@ export class TokenClient {
     args.redirect_uri = args.redirect_uri || this._settings.redirect_uri;
 
     let basicAuth: string | undefined;
-    const client_authentication = args._client_authentication || this._settings._client_authentication;
+    const client_authentication = args._client_authentication || this._settings.client_authentication;
     delete args._client_authentication;
 
     if (!args.code) { Log.error('TokenClient.exchangeCode: No code passed'); return Promise.reject(new Error('A code is required')); }
@@ -80,7 +80,7 @@ export class TokenClient {
     args.client_secret = args.client_secret || this._settings.client_secret;
 
     let basicAuth: string | undefined;
-    const client_authentication = args._client_authentication || this._settings._client_authentication;
+    const client_authentication = args._client_authentication || this._settings.client_authentication;
     delete args._client_authentication;
 
     if (!args.refresh_token) { Log.error('TokenClient.exchangeRefreshToken: No refresh_token passed'); return Promise.reject(new Error('A refresh_token is required')); }

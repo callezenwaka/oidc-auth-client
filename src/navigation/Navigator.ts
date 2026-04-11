@@ -156,7 +156,7 @@ export class PopupWindow {
     }
   }
 
-  static notifyOpener(url: string | undefined, keepOpen: boolean, delimiter: string): void {
+  static notifyOpener(url: string | undefined, keepOpen: boolean | undefined, delimiter: string): void {
     if (window.opener) {
       url = url || window.location.href;
       if (url) {
@@ -191,7 +191,7 @@ export class PopupNavigator {
     return Promise.resolve(popup);
   }
 
-  callback(url: string, keepOpen: boolean, delimiter: string): Promise<void> {
+  callback(url: string | undefined, keepOpen: boolean | undefined, delimiter: string): Promise<void> {
     Log.debug('PopupNavigator.callback');
 
     try {
