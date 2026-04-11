@@ -268,3 +268,6 @@ export const JoseUtilRsa = getJoseUtil({
 });
 
 export default JoseUtil;
+
+// Utility type — the static shape returned by getJoseUtil()
+export type JoseUtilType = typeof JoseUtil;
