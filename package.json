@@ -6,27 +6,43 @@
     "node": ">=20.9.0"
   },
   "type": "module",
-  "main": "index.js",
-  "types": "src/types/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
   "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
     "test": "vitest",
+    "test:run": "vitest run",
     "test:watch": "vitest --watch",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:package": "node --input-type=module --eval \"import('./dist/index.js').then(m => { if (!m.UserManager) throw new Error('Missing UserManager'); console.log('package OK'); })\"",
+    "prepublishOnly": "npm run build && npm run test:run"
   },
   "exports": {
     ".": {
-      "types": "./src/types/index.d.ts",
-      "import": "./index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
-    "./auth": "./src/auth/Client.js",
-    "./protocol": "./src/protocol/TokenService.js",
-    "./storage": "./src/storage/Storage.js",
-    "./utils": "./src/utils/Log.js"
+    "./auth": {
+      "types": "./dist/src/auth/Client.d.ts",
+      "import": "./dist/src/auth/Client.js"
+    },
+    "./protocol": {
+      "types": "./dist/src/protocol/TokenService.d.ts",
+      "import": "./dist/src/protocol/TokenService.js"
+    },
+    "./storage": {
+      "types": "./dist/src/storage/Storage.d.ts",
+      "import": "./dist/src/storage/Storage.js"
+    },
+    "./utils": {
+      "types": "./dist/src/utils/Log.d.ts",
+      "import": "./dist/src/utils/Log.js"
+    }
   },
   "files": [
-    "src/",
-    "index.js",
-    "version.js",
+    "dist/",
     "README.md",
     "LICENSE"
   ],
@@ -38,6 +54,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.15",
+    "typescript": "^6.0.2",
     "vitest": "^4.0.15"
   },
   "keywords": [
