@@ -1,6 +1,6 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-interface TimerService {
+export interface TimerService {
   setInterval(cb: () => void, duration: number): ReturnType<typeof setInterval>;
   clearInterval(handle: ReturnType<typeof setInterval>): void;
 }
