@@ -1,3 +1,9 @@
 .DS_Store
 node_modules/
-bin
+.bin
+spec-v*.md
+examples/SUBMODULE_SETUP.md
+CONSOLIDATION_SUMMARY.md
+CONSOLIDATION_PLAN.md
+oidc-consolidation-diagram.mermaid
+TEST_SUITE_SUMMARY.md
