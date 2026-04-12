@@ -34,6 +34,7 @@ export interface SigninRequestArgs {
   client_secret?: string;
   extraTokenParams?: Record<string, unknown>;
   skipUserInfo?: boolean;
+  code_verifier?: string;
   code_challenge?: string;
 }
 
@@ -46,7 +47,7 @@ export class SigninRequest {
       url: rawUrl, client_id, redirect_uri, response_type, scope, authority,
       data, prompt, display, max_age, ui_locales, id_token_hint, login_hint,
       acr_values, resource, request, request_uri, extraQueryParams,
-      request_type, client_secret, extraTokenParams, skipUserInfo, code_challenge,
+      request_type, client_secret, extraTokenParams, skipUserInfo, code_verifier, code_challenge,
     } = args;
 
     if (!rawUrl) { Log.error('SigninRequest.ctor: No url passed'); throw new Error('url'); }
@@ -66,7 +67,7 @@ export class SigninRequest {
       client_id,
       authority,
       redirect_uri,
-      code_verifier: code,
+      code_verifier: code_verifier || code,
       code_challenge,
       request_type,
       response_mode: response_mode_resolved,

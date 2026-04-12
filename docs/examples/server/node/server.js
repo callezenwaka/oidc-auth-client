@@ -3,9 +3,10 @@ import { createRemoteJWKSet, jwtVerify } from 'jose'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const AUTHORITY = process.env.AUTHORITY ?? 'https://your-idp.com'
-const AUDIENCE  = process.env.AUDIENCE  ?? 'your-client-id'
-const PORT      = process.env.PORT      ?? 4000
+const AUTHORITY        = process.env.AUTHORITY        ?? 'https://your-idp.com'
+const AUDIENCE         = process.env.AUDIENCE         // optional — set for Auth0/Okta/Keycloak; leave unset for Hydra
+const INTROSPECTION_URL = process.env.INTROSPECTION_URL // optional — set for Hydra opaque tokens
+const PORT             = process.env.PORT             ?? 4000
 
 const JWKS = createRemoteJWKSet(new URL(`${AUTHORITY}/.well-known/jwks.json`))
 
@@ -30,8 +31,23 @@ async function authenticate(req, res, next) {
   if (!token) return res.status(401).json({ error: 'No token provided' })
 
   try {
-    const { payload } = await jwtVerify(token, JWKS, { issuer: AUTHORITY, audience: AUDIENCE })
-    req.claims = payload
+    if (INTROSPECTION_URL) {
+      // Token introspection — works with opaque and JWT tokens (e.g. Ory Hydra)
+      const resp = await fetch(INTROSPECTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ token }),
+      })
+      const data = await resp.json()
+      if (!data.active) return res.status(401).json({ error: 'Invalid or expired token' })
+      req.claims = data
+    } else {
+      // JWT validation — works with providers that issue JWTs directly (Auth0, Okta, Keycloak)
+      const options = { issuer: AUTHORITY }
+      if (AUDIENCE) options.audience = AUDIENCE
+      const { payload } = await jwtVerify(token, JWKS, options)
+      req.claims = payload
+    }
     next()
   } catch (err) {
     res.status(401).json({ error: 'Invalid token', detail: err.message })
@@ -57,7 +73,7 @@ function requireRole(...roles) {
 // ─── Endpoints ────────────────────────────────────────────────────────────────
 
 // Public — no auth
-app.get('/api/public', (req, res) => {
+app.get('/api/public', (_, res) => {
   res.json({ message: 'Public endpoint — no authentication required' })
 })
 
@@ -82,9 +98,25 @@ app.get('/api/admin', authenticate, requireRole('admin'), (req, res) => {
   res.json({ message: 'Admin data', user: req.claims.sub })
 })
 
+// ─── Production hardening ─────────────────────────────────────────────────────
+//
+// In production, point post_logout_redirect_uri at a server route rather than
+// directly at the SPA so you can send Clear-Site-Data, which guarantees the
+// browser wipes storage and cookies even if the client-side signout is
+// interrupted (e.g. tab closed mid-flow).
+//
+// UserManager config:
+//   post_logout_redirect_uri: `${window.location.origin}/api/logout/complete`
+//
+// app.get('/api/logout/complete', (_, res) => {
+//   res.set('Clear-Site-Data', '"storage", "cookies"')
+//   res.redirect('http://localhost:3001/')   // or your SPA origin
+// })
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)
-  console.log(`Authority: ${AUTHORITY}`)
+  console.log(`Authority:   ${AUTHORITY}`)
+  console.log(`Validation:  ${INTROSPECTION_URL ? `introspection (${INTROSPECTION_URL})` : 'JWT (JWKS)'}`)
 })

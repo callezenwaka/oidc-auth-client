@@ -8,8 +8,9 @@ name: Publish to npm
 #   AUTOMATION_TOKEN — fine-grained PAT with Contents: Read & write
 #                      + Workflows: Read & write on this repo
 #                      (used to push the version-bump commit back to main)
-#   NODE_AUTH_TOKEN  — npm access token for publishing (set in repo settings
-#                      as NPM_TOKEN, referenced below)
+#
+# Publishing uses npm Trusted Publishers (OIDC) — no NODE_AUTH_TOKEN needed.
+# Configure it at: https://www.npmjs.com/package/oidc-auth-client/access
 
 on:
   push:

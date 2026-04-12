@@ -1,5 +1,6 @@
 .DS_Store
 node_modules/
+.env
 .bin
 spec-v*.md
 examples/SUBMODULE_SETUP.md

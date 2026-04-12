@@ -2,8 +2,8 @@ import { UserManager } from 'oidc-auth-client'
 
 // Update these values with your Identity Provider settings
 export const userManager = new UserManager({
-  authority: 'https://your-idp.com',
-  client_id: 'your-client-id',
+  authority: import.meta.env.VITE_AUTHORITY,
+  client_id: import.meta.env.VITE_CLIENT_ID,
   redirect_uri: `${window.location.origin}/callback`,
   post_logout_redirect_uri: `${window.location.origin}/`,
   silent_redirect_uri: `${window.location.origin}/silent-renew.html`,

@@ -1,12 +1,13 @@
 // When installed from npm: import { UserManager } from 'oidc-auth-client'
 // For this example (within repo, after npm run build at repo root):
 import { UserManager } from '../../../../dist/index.js';
+import { AUTHORITY, CLIENT_ID } from './config.js';
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
 const userManager = new UserManager({
-  authority: 'https://your-idp.com',
-  client_id: 'your-client-id',
+  authority: AUTHORITY,
+  client_id: CLIENT_ID,
   redirect_uri: `${window.location.origin}/callback.html`,
   post_logout_redirect_uri: `${window.location.origin}/`,
   silent_redirect_uri: `${window.location.origin}/silent-renew.html`,
