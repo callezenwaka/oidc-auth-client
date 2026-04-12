@@ -1,10 +1,10 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 import { Log } from '../utils/Log.js';
-import { generateRandom, JoseUtil } from '../crypto/Crypto.js';
+import { generateRandom } from '../crypto/Crypto.js';
 import { CheckSessionIFrame } from '../navigation/Navigator.js';
 import { Global } from '../utils/Global.js';
-import type { StateStore } from '../storage/Storage.js';
+import type { StateStore } from '../types/storage.js';
 import type { TimerService } from '../utils/Global.js';
 
 //=============================================================================
@@ -13,14 +13,14 @@ import type { TimerService } from '../utils/Global.js';
 
 export interface StateArgs {
   id?: string;
-  data?: any;
+  data?: unknown;
   created?: number;
   request_type?: string;
 }
 
 export class State {
   private _id: string;
-  private _data: any;
+  private _data: unknown;
   private _created: number;
   private _request_type: string | undefined;
 
@@ -37,7 +37,7 @@ export class State {
   }
 
   get id(): string { return this._id; }
-  get data(): any { return this._data; }
+  get data(): unknown { return this._data; }
   get created(): number { return this._created; }
   get request_type(): string | undefined { return this._request_type; }
 
@@ -76,8 +76,8 @@ export class State {
               if (state.created <= cutoff) {
                 remove = true;
               }
-            } catch (e: any) {
-              Log.error('State.clearStaleState: Error parsing state for key', key, e.message);
+            } catch (e: unknown) {
+              Log.error('State.clearStaleState: Error parsing state for key', key, (e as Error).message);
               remove = true;
             }
           } else {
@@ -110,10 +110,11 @@ export interface SigninStateArgs extends StateArgs {
   client_id?: string;
   redirect_uri?: string;
   code_verifier?: boolean | string;
+  code_challenge?: string;
   response_mode?: string | null;
   client_secret?: string;
   scope?: string;
-  extraTokenParams?: Record<string, any>;
+  extraTokenParams?: Record<string, unknown>;
   skipUserInfo?: boolean;
 }
 
@@ -127,14 +128,14 @@ export class SigninState extends State {
   private _response_mode: string | null | undefined;
   private _client_secret: string | undefined;
   private _scope: string | undefined;
-  private _extraTokenParams: Record<string, any> | undefined;
+  private _extraTokenParams: Record<string, unknown> | undefined;
   private _skipUserInfo: boolean | undefined;
 
   constructor(args: SigninStateArgs = {}) {
     super(args);
 
-    const { nonce, authority, client_id, redirect_uri, code_verifier, response_mode,
-      client_secret, scope, extraTokenParams, skipUserInfo } = args;
+    const { nonce, authority, client_id, redirect_uri, code_verifier, code_challenge,
+      response_mode, client_secret, scope, extraTokenParams, skipUserInfo } = args;
 
     if (nonce === true) {
       this._nonce = generateRandom();
@@ -143,16 +144,14 @@ export class SigninState extends State {
     }
 
     if (code_verifier === true) {
-      // generateRandom() produces 32 length
       this._code_verifier = generateRandom() + generateRandom() + generateRandom();
     } else if (code_verifier) {
       this._code_verifier = code_verifier as string;
     }
 
-    if (this._code_verifier) {
-      const hash = JoseUtil.hashString(this._code_verifier, 'SHA256');
-      this._code_challenge = JoseUtil.hexToBase64Url(hash!);
-    }
+    // code_challenge is pre-computed by createSigninRequest (async PKCE via jose)
+    // and passed in; never computed synchronously here.
+    this._code_challenge = code_challenge;
 
     this._redirect_uri = redirect_uri;
     this._authority = authority;
@@ -219,7 +218,7 @@ interface SessionStatus {
 }
 
 interface ISessionEvents {
-  addUserLoaded(fn: (user: any) => void): void;
+  addUserLoaded(fn: (user: SessionUser) => void): void;
   addUserUnloaded(fn: () => void): void;
   _raiseUserSignedOut(): void;
   _raiseUserSignedIn(): void;

@@ -12,12 +12,14 @@ import type { SignoutRequestArgs } from '../protocol/Requests.js';
 import { SignoutResponse } from '../protocol/Responses.js';
 import { SigninState, State } from './Session.js';
 import { User } from '../models/User.js';
+import type { UserProfile } from '../types/user.js';
+import type { StateStore } from '../types/storage.js';
 import { UserManagerEvents } from './Events.js';
 import { SilentRenewService, SessionMonitor } from './Session.js';
 import { TokenRevocationClient, TokenClient } from '../protocol/TokenService.js';
-import { JoseUtil } from '../crypto/Crypto.js';
+import { JoseUtil, generateRandom } from '../crypto/Crypto.js';
 import type { JoseUtilType } from '../crypto/Crypto.js';
-import type { StateStore } from '../storage/Storage.js';
+import type { INavigator, NavigateParams, NavigatorResponse } from '../types/navigator.js';
 
 //=============================================================================
 // OidcClient - Low-level OIDC protocol client
@@ -27,8 +29,8 @@ export interface CreateSigninRequestArgs {
   response_type?: string;
   scope?: string;
   redirect_uri?: string;
-  data?: any;
-  state?: any;
+  data?: unknown;
+  state?: unknown;
   prompt?: string;
   display?: string;
   max_age?: number;
@@ -41,15 +43,15 @@ export interface CreateSigninRequestArgs {
   request_uri?: string;
   response_mode?: string | null;
   extraQueryParams?: Record<string, string>;
-  extraTokenParams?: Record<string, any>;
+  extraTokenParams?: Record<string, unknown>;
   request_type?: string;
   skipUserInfo?: boolean;
 }
 
 export interface CreateSignoutRequestArgs {
   id_token_hint?: string;
-  data?: any;
-  state?: any;
+  data?: unknown;
+  state?: unknown;
   post_logout_redirect_uri?: string;
   extraQueryParams?: Record<string, string>;
   request_type?: string;
@@ -83,7 +85,7 @@ export class OidcClient {
     return this._metadataService;
   }
 
-  createSigninRequest(
+  async createSigninRequest(
     {
       response_type,
       scope,
@@ -131,42 +133,49 @@ export class OidcClient {
       return Promise.reject(new Error('OpenID Connect hybrid flow is not supported'));
     }
 
-    return this._metadataService.getAuthorizationEndpoint().then(url => {
-      Log.debug('OidcClient.createSigninRequest: Received authorization endpoint', url);
+    const url = await this._metadataService.getAuthorizationEndpoint();
+    Log.debug('OidcClient.createSigninRequest: Received authorization endpoint', url);
 
-      const signinRequest = new SigninRequest({
-        url: url!,
-        client_id: client_id!,
-        redirect_uri: redirect_uri!,
-        response_type: response_type!,
-        scope: scope!,
-        data: data || state,
-        authority: authority!,
-        prompt,
-        display,
-        max_age,
-        ui_locales,
-        id_token_hint,
-        login_hint,
-        acr_values,
-        resource,
-        request,
-        request_uri,
-        extraQueryParams,
-        extraTokenParams,
-        request_type,
-        response_mode,
-        client_secret: this._settings.client_secret,
-        skipUserInfo,
-      } as SigninRequestArgs);
+    // Pre-compute PKCE code_verifier + code_challenge (jose requires async SHA-256)
+    let code_verifier: string | undefined;
+    let code_challenge: string | undefined;
+    if (SigninRequest.isCode(response_type!)) {
+      code_verifier = generateRandom() + generateRandom() + generateRandom();
+      code_challenge = await JoseUtil.calculatePKCECodeChallenge(code_verifier);
+    }
 
-      const signinState = signinRequest.state;
-      const store = stateStore || this._stateStore;
+    const signinRequest = new SigninRequest({
+      url: url!,
+      client_id: client_id!,
+      redirect_uri: redirect_uri!,
+      response_type: response_type!,
+      scope: scope!,
+      data: data || state,
+      authority: authority!,
+      prompt,
+      display,
+      max_age,
+      ui_locales,
+      id_token_hint,
+      login_hint,
+      acr_values,
+      resource,
+      request,
+      request_uri,
+      extraQueryParams,
+      extraTokenParams,
+      request_type,
+      response_mode,
+      client_secret: this._settings.client_secret,
+      skipUserInfo,
+      code_verifier,
+      code_challenge,
+    } as SigninRequestArgs);
 
-      return store.set(signinState.id, signinState.toStorageString()).then(() => {
-        return signinRequest;
-      });
-    });
+    const signinState = signinRequest.state;
+    const store = stateStore || this._stateStore;
+    await store.set(signinState.id, signinState.toStorageString());
+    return signinRequest;
   }
 
   readSigninResponseState(
@@ -193,7 +202,7 @@ export class OidcClient {
       ? store.remove.bind(store)
       : store.get.bind(store);
 
-    return stateApi(response.state).then(storedStateString => {
+    return stateApi(response.state as string).then(storedStateString => {
       if (!storedStateString) {
         Log.error('OidcClient.readSigninResponseState: No matching state found in storage');
         throw new Error('No matching state found in storage');
@@ -270,13 +279,18 @@ export class OidcClient {
 
       if (response.error) {
         Log.warn('OidcClient.readSignoutResponseState: Response was error: ', response.error);
-        return Promise.reject(new ErrorResponse(response as any));
+        return Promise.reject(new ErrorResponse({
+          error: response.error,
+          error_description: response.error_description,
+          error_uri: response.error_uri,
+          state: typeof response.state === 'string' ? response.state : undefined,
+        }));
       }
 
       return Promise.resolve({ state: undefined, response });
     }
 
-    const stateKey = response.state;
+    const stateKey = response.state as string;
     const store = stateStore || this._stateStore;
     const stateApi = removeState
       ? store.remove.bind(store)
@@ -421,7 +435,7 @@ export class UserManager extends OidcClient {
   signinRedirect(args: UserManagerSigninArgs = {}): Promise<void> {
     args = Object.assign({}, args);
     args.request_type = 'si:r';
-    const navParams = {
+    const navParams: NavigateParams = {
       useReplaceToNavigate: args.useReplaceToNavigate,
     };
     return this._signinStart(args, this._redirectNavigator, navParams).then(() => {
@@ -457,12 +471,10 @@ export class UserManager extends OidcClient {
       popupWindowFeatures: args.popupWindowFeatures || this.settings.popupWindowFeatures,
       popupWindowTarget: args.popupWindowTarget || this.settings.popupWindowTarget,
     }).then(user => {
-      if (user) {
-        if (user.profile && user.profile.sub) {
-          Log.info('UserManager.signinPopup: signinPopup successful, signed in sub: ', user.profile.sub);
-        } else {
-          Log.info('UserManager.signinPopup: no sub');
-        }
+      if (user.profile && user.profile.sub) {
+        Log.info('UserManager.signinPopup: signinPopup successful, signed in sub: ', user.profile.sub);
+      } else {
+        Log.info('UserManager.signinPopup: no sub');
       }
       return user;
     });
@@ -470,18 +482,8 @@ export class UserManager extends OidcClient {
 
   signinPopupCallback(url?: string): Promise<User | undefined> {
     return this._signinCallback(url, this._popupNavigator)
-      .then(user => {
-        if (user) {
-          if (user.profile && user.profile.sub) {
-            Log.info('UserManager.signinPopupCallback: successful, signed in sub: ', user.profile.sub);
-          } else {
-            Log.info('UserManager.signinPopupCallback: no sub');
-          }
-        }
-        return user;
-      })
-      .catch(err => {
-        Log.error('UserManager.signinPopupCallback error: ' + err && err.message);
+      .catch((err: Error) => {
+        Log.error('UserManager.signinPopupCallback error: ' + err?.message);
         return undefined;
       });
   }
@@ -525,7 +527,7 @@ export class UserManager extends OidcClient {
           let idTokenValidation = Promise.resolve();
           if (result.id_token) {
             idTokenValidation = this._validateIdTokenFromTokenRefreshToken(
-              user.profile as any,
+              user.profile,
               result.id_token,
             );
           }
@@ -549,7 +551,7 @@ export class UserManager extends OidcClient {
     });
   }
 
-  private _validateIdTokenFromTokenRefreshToken(profile: Record<string, any>, id_token: string): Promise<void> {
+  private _validateIdTokenFromTokenRefreshToken(profile: UserProfile, id_token: string): Promise<void> {
     return this._metadataService.getIssuer().then(issuer => {
       return this.settings.getEpochTime().then(now => {
         return this._joseUtil
@@ -594,28 +596,17 @@ export class UserManager extends OidcClient {
       startUrl: url,
       silentRequestTimeout: args.silentRequestTimeout || this.settings.silentRequestTimeout,
     }).then(user => {
-      if (user) {
-        if (user.profile && user.profile.sub) {
-          Log.info('UserManager.signinSilent: successful, signed in sub: ', user.profile.sub);
-        } else {
-          Log.info('UserManager.signinSilent: no sub');
-        }
+      if (user.profile && user.profile.sub) {
+        Log.info('UserManager.signinSilent: successful, signed in sub: ', user.profile.sub);
+      } else {
+        Log.info('UserManager.signinSilent: no sub');
       }
       return user;
     });
   }
 
   signinSilentCallback(url?: string): Promise<User | undefined> {
-    return this._signinCallback(url, this._iframeNavigator).then(user => {
-      if (user) {
-        if (user.profile && user.profile.sub) {
-          Log.info('UserManager.signinSilentCallback: successful, signed in sub: ', user.profile.sub);
-        } else {
-          Log.info('UserManager.signinSilentCallback: no sub');
-        }
-      }
-      return user;
-    });
+    return this._signinCallback(url, this._iframeNavigator);
   }
 
   signinCallback(url?: string): Promise<User | undefined> {
@@ -668,7 +659,7 @@ export class UserManager extends OidcClient {
       startUrl: url,
       silentRequestTimeout: args.silentRequestTimeout || this.settings.silentRequestTimeout,
     }).then(navResponse => {
-      return this.processSigninResponse((navResponse as any).url)
+      return this.processSigninResponse(navResponse.url)
         .then(signinResponse => {
           Log.debug('UserManager.querySessionStatus: got signin response');
 
@@ -677,7 +668,7 @@ export class UserManager extends OidcClient {
             return {
               session_state: signinResponse.session_state,
               sub: signinResponse.profile.sub,
-              sid: (signinResponse.profile as any).sid,
+              sid: signinResponse.profile.sid,
             };
           } else {
             Log.info('querySessionStatus successful, user not authenticated');
@@ -701,24 +692,27 @@ export class UserManager extends OidcClient {
     });
   }
 
-  private _signin(args: UserManagerSigninArgs, navigator: any, navigatorParams: Record<string, any> = {}): Promise<User> {
+  private _signin(args: UserManagerSigninArgs, navigator: INavigator, navigatorParams: NavigateParams = {}): Promise<User> {
     return this._signinStart(args, navigator, navigatorParams).then(navResponse => {
-      return this._signinEnd((navResponse as any).url, args);
+      return this._signinEnd(navResponse.url, args);
     });
   }
 
-  private _signinStart(args: UserManagerSigninArgs, navigator: any, navigatorParams: Record<string, any> = {}): Promise<any> {
-    return navigator.prepare(navigatorParams).then((handle: any) => {
+  private _signinStart(args: UserManagerSigninArgs, navigator: INavigator, navigatorParams: NavigateParams = {}): Promise<NavigatorResponse> {
+    return navigator.prepare(navigatorParams).then(handle => {
       Log.debug('UserManager._signinStart: got navigator window handle');
 
       return this.createSigninRequest(args)
         .then(signinRequest => {
           Log.debug('UserManager._signinStart: got signin request');
 
-          navigatorParams.url = signinRequest.url;
-          navigatorParams.id = signinRequest.state.id;
+          const navigateParams: NavigateParams & { url: string } = {
+            ...navigatorParams,
+            url: signinRequest.url,
+            id: signinRequest.state.id,
+          };
 
-          return handle.navigate(navigatorParams);
+          return handle.navigate(navigateParams);
         })
         .catch((err: Error) => {
           if (handle.close) {
@@ -753,13 +747,13 @@ export class UserManager extends OidcClient {
     });
   }
 
-  private _signinCallback(url: string | undefined, navigator: any): Promise<any> {
+  private _signinCallback(url: string | undefined, navigator: INavigator): Promise<User | undefined> {
     Log.debug('UserManager._signinCallback');
     const useQuery =
       this._settings.response_mode === 'query' ||
       (!this._settings.response_mode && SigninRequest.isCode(this._settings.response_type));
     const delimiter = useQuery ? '?' : '#';
-    return navigator.callback(url, undefined, delimiter);
+    return navigator.callback!(url, undefined, delimiter).then(() => undefined);
   }
 
   signoutRedirect(args: UserManagerSignoutArgs = {}): Promise<void> {
@@ -769,7 +763,7 @@ export class UserManager extends OidcClient {
     if (postLogoutRedirectUri) {
       args.post_logout_redirect_uri = postLogoutRedirectUri;
     }
-    const navParams = {
+    const navParams: NavigateParams = {
       useReplaceToNavigate: args.useReplaceToNavigate,
     };
     return this._signoutStart(args, this._redirectNavigator, navParams).then(() => {
@@ -818,14 +812,14 @@ export class UserManager extends OidcClient {
     });
   }
 
-  private _signout(args: UserManagerSignoutArgs, navigator: any, navigatorParams: Record<string, any> = {}): Promise<SignoutResponse> {
+  private _signout(args: UserManagerSignoutArgs, navigator: INavigator, navigatorParams: NavigateParams = {}): Promise<SignoutResponse> {
     return this._signoutStart(args, navigator, navigatorParams).then(navResponse => {
-      return this._signoutEnd((navResponse as any).url);
+      return this._signoutEnd(navResponse.url);
     });
   }
 
-  private _signoutStart(args: UserManagerSignoutArgs = {}, navigator: any, navigatorParams: Record<string, any> = {}): Promise<any> {
-    return navigator.prepare(navigatorParams).then((handle: any) => {
+  private _signoutStart(args: UserManagerSignoutArgs = {}, navigator: INavigator, navigatorParams: NavigateParams = {}): Promise<NavigatorResponse> {
+    return navigator.prepare(navigatorParams).then(handle => {
       Log.debug('UserManager._signoutStart: got navigator window handle');
 
       return this._loadUser()
@@ -848,11 +842,13 @@ export class UserManager extends OidcClient {
               return this.createSignoutRequest(args).then(signoutRequest => {
                 Log.debug('UserManager._signoutStart: got signout request');
 
-                navigatorParams.url = signoutRequest.url;
-                if (signoutRequest.state) {
-                  navigatorParams.id = signoutRequest.state.id;
-                }
-                return handle.navigate(navigatorParams);
+                const navigateParams: NavigateParams & { url: string } = {
+                  ...navigatorParams,
+                  url: signoutRequest.url,
+                  id: signoutRequest.state?.id,
+                };
+
+                return handle.navigate(navigateParams);
               });
             });
           });
@@ -881,10 +877,10 @@ export class UserManager extends OidcClient {
           if (success) {
             Log.debug('UserManager.revokeAccessToken: removing token properties from user and re-storing');
 
-            user!.access_token = null as any;
-            user!.refresh_token = null as any;
-            user!.expires_at = null as any;
-            user!.token_type = null as any;
+            user!.access_token = '';
+            user!.refresh_token = '';
+            user!.expires_at = undefined;
+            user!.token_type = '';
 
             return this.storeUser(user!).then(() => {
               Log.debug('UserManager.revokeAccessToken: user stored');

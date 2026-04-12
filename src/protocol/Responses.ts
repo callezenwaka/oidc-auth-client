@@ -2,7 +2,7 @@
 
 import { Log } from '../utils/Log.js';
 import { UrlUtility } from '../services/Http.js';
-import type { UserProfile } from '../models/User.js';
+import type { UserProfile } from '../types/user.js';
 
 const OidcScope = 'openid';
 
@@ -15,7 +15,7 @@ export class SigninResponse {
   error_description: string | undefined;
   error_uri: string | undefined;
   code: string | undefined;
-  state: any;
+  state: unknown;
   id_token: string | undefined;
   session_state: string | undefined;
   access_token: string | undefined;
@@ -78,7 +78,7 @@ export class SignoutResponse {
   error: string | undefined;
   error_description: string | undefined;
   error_uri: string | undefined;
-  state: any;
+  state: unknown;
 
   constructor(url: string) {
     const values = UrlUtility.parseUrlFragment(url, '?');

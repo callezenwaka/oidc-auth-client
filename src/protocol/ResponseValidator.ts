@@ -6,9 +6,11 @@ import { UserInfoService, TokenClient } from './TokenService.js';
 import { ErrorResponse } from './Responses.js';
 import { JoseUtil } from '../crypto/Crypto.js';
 import type { JoseUtilType } from '../crypto/Crypto.js';
+import type { JwkKey, ParsedJwt } from '../types/crypto.js';
 import type { SigninResponse } from './Responses.js';
 import type { SignoutResponse } from './Responses.js';
-import type { UserProfile } from '../models/User.js';
+import type { UserProfile } from '../types/user.js';
+import type { SigninState, State } from '../auth/Session.js';
 
 const ProtocolClaims = ['nonce', 'at_hash', 'iat', 'nbf', 'exp', 'aud', 'iss', 'c_hash'];
 
@@ -20,7 +22,6 @@ export interface ValidatorSettings {
   mergeClaims?: boolean;
   filterProtocolClaims?: boolean;
   getEpochTime(): Promise<number>;
-  [key: string]: any;
 }
 
 export class ResponseValidator {
@@ -45,7 +46,7 @@ export class ResponseValidator {
     this._tokenClient = new TokenClientCtor(this._settings);
   }
 
-  validateSigninResponse(state: any, response: SigninResponse): Promise<SigninResponse> {
+  validateSigninResponse(state: SigninState, response: SigninResponse): Promise<SigninResponse> {
     Log.debug('ResponseValidator.validateSigninResponse');
     return this._processSigninParams(state, response).then(response => {
       Log.debug('ResponseValidator.validateSigninResponse: state processed');
@@ -59,7 +60,7 @@ export class ResponseValidator {
     });
   }
 
-  validateSignoutResponse(state: any, response: SignoutResponse): Promise<SignoutResponse> {
+  validateSignoutResponse(state: State, response: SignoutResponse): Promise<SignoutResponse> {
     if (state.id !== response.state) {
       Log.error('ResponseValidator.validateSignoutResponse: State does not match');
       return Promise.reject(new Error('State does not match'));
@@ -69,12 +70,17 @@ export class ResponseValidator {
 
     if (response.error) {
       Log.warn('ResponseValidator.validateSignoutResponse: Response was error', response.error);
-      return Promise.reject(new ErrorResponse(response as any));
+      return Promise.reject(new ErrorResponse({
+        error: response.error,
+        error_description: response.error_description,
+        error_uri: response.error_uri,
+        state: typeof response.state === 'string' ? response.state : undefined,
+      }));
     }
     return Promise.resolve(response);
   }
 
-  private _processSigninParams(state: any, response: SigninResponse): Promise<SigninResponse> {
+  private _processSigninParams(state: SigninState, response: SigninResponse): Promise<SigninResponse> {
     if (state.id !== response.state) {
       Log.error('ResponseValidator._processSigninParams: State does not match');
       return Promise.reject(new Error('State does not match'));
@@ -107,7 +113,12 @@ export class ResponseValidator {
 
     if (response.error) {
       Log.warn('ResponseValidator._processSigninParams: Response was error', response.error);
-      return Promise.reject(new ErrorResponse(response as any));
+      return Promise.reject(new ErrorResponse({
+        error: response.error,
+        error_description: response.error_description,
+        error_uri: response.error_uri,
+        state: typeof response.state === 'string' ? response.state : undefined,
+      }));
     }
     if (state.nonce && !response.id_token) {
       Log.error('ResponseValidator._processSigninParams: Expecting id_token in response');
@@ -132,7 +143,7 @@ export class ResponseValidator {
     return Promise.resolve(response);
   }
 
-  private _processClaims(state: any, response: SigninResponse): Promise<SigninResponse> {
+  private _processClaims(state: SigninState, response: SigninResponse): Promise<SigninResponse> {
     if (response.isOpenIdConnect) {
       Log.debug('ResponseValidator._processClaims: response is OIDC, processing claims');
       response.profile = this._filterProtocolClaims(response.profile);
@@ -157,19 +168,27 @@ export class ResponseValidator {
     return Promise.resolve(response);
   }
 
-  private _mergeClaims(claims1: Record<string, any>, claims2: Record<string, any>): Record<string, any> {
-    const result: Record<string, any> = Object.assign({}, claims1);
+  private _mergeClaims(
+    claims1: Record<string, unknown>,
+    claims2: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const result: Record<string, unknown> = Object.assign({}, claims1);
     for (const name in claims2) {
-      let values: any[] = claims2[name];
+      let values: unknown[] = claims2[name] as unknown[];
       if (!Array.isArray(values)) values = [values];
       for (const value of values) {
         if (!result[name]) {
           result[name] = value;
         } else if (Array.isArray(result[name])) {
-          if (!result[name].includes(value)) result[name].push(value);
+          if (!(result[name] as unknown[]).includes(value)) {
+            (result[name] as unknown[]).push(value);
+          }
         } else if (result[name] !== value) {
-          if (typeof value === 'object' && this._settings.mergeClaims) {
-            result[name] = this._mergeClaims(result[name], value);
+          if (typeof value === 'object' && value !== null && this._settings.mergeClaims) {
+            result[name] = this._mergeClaims(
+              result[name] as Record<string, unknown>,
+              value as Record<string, unknown>,
+            );
           } else {
             result[name] = [result[name], value];
           }
@@ -179,8 +198,9 @@ export class ResponseValidator {
     return result;
   }
 
-  private _filterProtocolClaims(claims: any): any {
+  private _filterProtocolClaims(claims: UserProfile | undefined): UserProfile | undefined {
     Log.debug('ResponseValidator._filterProtocolClaims, incoming claims:', claims);
+    if (!claims) return claims;
     const result = Object.assign({}, claims);
     if (this._settings.filterProtocolClaims) {
       ProtocolClaims.forEach(type => delete result[type]);
@@ -191,7 +211,7 @@ export class ResponseValidator {
     return result;
   }
 
-  private _validateTokens(state: any, response: SigninResponse): Promise<SigninResponse> {
+  private _validateTokens(state: SigninState, response: SigninResponse): Promise<SigninResponse> {
     if (response.code) {
       Log.debug('ResponseValidator._validateTokens: Validating code');
       return this._processCode(state, response);
@@ -208,8 +228,8 @@ export class ResponseValidator {
     return Promise.resolve(response);
   }
 
-  private _processCode(state: any, response: SigninResponse): Promise<SigninResponse> {
-    const request: Record<string, any> = {
+  private _processCode(state: SigninState, response: SigninResponse): Promise<SigninResponse> {
+    const request: Record<string, unknown> = {
       client_id: state.client_id,
       client_secret: state.client_secret,
       code: response.code,
@@ -221,7 +241,7 @@ export class ResponseValidator {
     }
     return this._tokenClient.exchangeCode(request).then(tokenResponse => {
       for (const key in tokenResponse) {
-        (response as any)[key] = tokenResponse[key];
+        (response as unknown as Record<string, unknown>)[key] = tokenResponse[key];
       }
       if (response.id_token) {
         Log.debug('ResponseValidator._processCode: token response successful, processing id_token');
@@ -232,9 +252,9 @@ export class ResponseValidator {
     });
   }
 
-  private _validateIdTokenAttributes(state: any, response: SigninResponse): Promise<SigninResponse> {
+  private _validateIdTokenAttributes(state: SigninState, response: SigninResponse): Promise<SigninResponse> {
     return this._metadataService.getIssuer().then(issuer => {
-      const audience = state.client_id;
+      const audience = state.client_id!; // guarded by _processSigninParams
       const clockSkewInSeconds = this._settings.clockSkew;
       Log.debug('ResponseValidator._validateIdTokenAttributes: Validating JWT attributes; using clock skew (in seconds) of: ', clockSkewInSeconds);
       return this._settings.getEpochTime().then(now => {
@@ -248,38 +268,39 @@ export class ResponseValidator {
               Log.error('ResponseValidator._validateIdTokenAttributes: No sub present in id_token');
               return Promise.reject(new Error('No sub present in id_token'));
             }
-            response.profile = payload as any;
+            response.profile = payload as UserProfile;
             return response;
           });
       });
     });
   }
 
-  private _validateIdTokenAndAccessToken(state: any, response: SigninResponse): Promise<SigninResponse> {
+  private _validateIdTokenAndAccessToken(state: SigninState, response: SigninResponse): Promise<SigninResponse> {
     return this._validateIdToken(state, response).then(response => this._validateAccessToken(response));
   }
 
-  private _getSigningKeyForJwt(jwt: any): Promise<any> {
+  private _getSigningKeyForJwt(jwt: ParsedJwt): Promise<JwkKey | undefined> {
     return this._metadataService.getSigningKeys().then(keys => {
+      const signingKeys = keys as JwkKey[] | null;
       const kid = jwt.header.kid;
-      if (!keys) {
+      if (!signingKeys) {
         Log.error('ResponseValidator._validateIdToken: No signing keys from metadata');
         return Promise.reject(new Error('No signing keys from metadata'));
       }
       Log.debug('ResponseValidator._validateIdToken: Received signing keys');
       if (!kid) {
-        const filtered = this._filterByAlg(keys, jwt.header.alg);
+        const filtered = this._filterByAlg(signingKeys, jwt.header.alg as string);
         if (filtered.length > 1) {
           Log.error('ResponseValidator._validateIdToken: No kid found in id_token and more than one key found in metadata');
           return Promise.reject(new Error('No kid found in id_token and more than one key found in metadata'));
         }
         return Promise.resolve(filtered[0]);
       }
-      return Promise.resolve(keys.find((k: any) => k.kid === kid));
+      return Promise.resolve(signingKeys.find(k => k.kid === kid));
     });
   }
 
-  private _getSigningKeyForJwtWithSingleRetry(jwt: any): Promise<any> {
+  private _getSigningKeyForJwtWithSingleRetry(jwt: ParsedJwt): Promise<JwkKey | undefined> {
     return this._getSigningKeyForJwt(jwt).then(key => {
       if (!key) {
         this._metadataService.resetSigningKeys();
@@ -289,7 +310,7 @@ export class ResponseValidator {
     });
   }
 
-  private _validateIdToken(state: any, response: SigninResponse): Promise<SigninResponse> {
+  private _validateIdToken(state: SigninState, response: SigninResponse): Promise<SigninResponse> {
     if (!state.nonce) {
       Log.error('ResponseValidator._validateIdToken: No nonce on state');
       return Promise.reject(new Error('No nonce on state'));
@@ -310,7 +331,7 @@ export class ResponseValidator {
           Log.error('ResponseValidator._validateIdToken: No key matching kid or alg found in signing keys');
           return Promise.reject(new Error('No key matching kid or alg found in signing keys'));
         }
-        const audience = state.client_id;
+        const audience = state.client_id!; // guarded by _processSigninParams
         const clockSkewInSeconds = this._settings.clockSkew;
         Log.debug('ResponseValidator._validateIdToken: Validating JWT; using clock skew (in seconds) of: ', clockSkewInSeconds);
         return this._joseUtil.validateJwt(response.id_token!, key, issuer, audience, clockSkewInSeconds).then(() => {
@@ -319,14 +340,14 @@ export class ResponseValidator {
             Log.error('ResponseValidator._validateIdToken: No sub present in id_token');
             return Promise.reject(new Error('No sub present in id_token'));
           }
-          response.profile = jwt.payload as any;
+          response.profile = jwt.payload as UserProfile;
           return response;
         });
       });
     });
   }
 
-  private _filterByAlg(keys: any[], alg: string): any[] {
+  private _filterByAlg(keys: JwkKey[], alg: string): JwkKey[] {
     let kty: string | null = null;
     if (alg.startsWith('RS')) kty = 'RSA';
     else if (alg.startsWith('PS')) kty = 'PS';
@@ -338,12 +359,12 @@ export class ResponseValidator {
     return keys;
   }
 
-  private _validateAccessToken(response: SigninResponse): Promise<SigninResponse> {
+  private async _validateAccessToken(response: SigninResponse): Promise<SigninResponse> {
     if (!response.profile) {
       Log.error('ResponseValidator._validateAccessToken: No profile loaded from id_token');
       return Promise.reject(new Error('No profile loaded from id_token'));
     }
-    if (!(response.profile as any).at_hash) {
+    if (!response.profile.at_hash) {
       Log.error('ResponseValidator._validateAccessToken: No at_hash in id_token');
       return Promise.reject(new Error('No at_hash in id_token'));
     }
@@ -356,7 +377,7 @@ export class ResponseValidator {
       Log.error('ResponseValidator._validateAccessToken: Failed to parse id_token', jwt);
       return Promise.reject(new Error('Failed to parse id_token'));
     }
-    const hashAlg: string = jwt.header.alg;
+    const hashAlg = jwt.header.alg as string;
     if (!hashAlg || hashAlg.length !== 5) {
       Log.error('ResponseValidator._validateAccessToken: Unsupported alg:', hashAlg);
       return Promise.reject(new Error('Unsupported alg: ' + hashAlg));
@@ -369,7 +390,7 @@ export class ResponseValidator {
     }
 
     const sha = 'sha' + hashBits;
-    const hash = this._joseUtil.hashString(response.access_token!, sha);
+    const hash = await this._joseUtil.hashString(response.access_token!, sha);
     if (!hash) {
       Log.error('ResponseValidator._validateAccessToken: access_token hash failed:', sha);
       return Promise.reject(new Error('Failed to validate at_hash'));
@@ -377,8 +398,8 @@ export class ResponseValidator {
 
     const left = hash.substring(0, hash.length / 2);
     const left_b64u = this._joseUtil.hexToBase64Url(left);
-    if (left_b64u !== (response.profile as any).at_hash) {
-      Log.error('ResponseValidator._validateAccessToken: Failed to validate at_hash', left_b64u, (response.profile as any).at_hash);
+    if (left_b64u !== response.profile.at_hash) {
+      Log.error('ResponseValidator._validateAccessToken: Failed to validate at_hash', left_b64u, response.profile.at_hash);
       return Promise.reject(new Error('Failed to validate at_hash'));
     }
 

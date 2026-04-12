@@ -2,6 +2,7 @@
 
 import { Log } from '../utils/Log.js';
 import { Global } from '../utils/Global.js';
+import type { JwkKey } from '../types/crypto.js';
 
 //=============================================================================
 // UrlUtility
@@ -113,8 +114,8 @@ export class JsonService {
               try {
                 resolve(JSON.parse(req.responseText));
                 return;
-              } catch (e: any) {
-                Log.error('JsonService.getJson: Error parsing JSON response', e.message);
+              } catch (e: unknown) {
+                Log.error('JsonService.getJson: Error parsing JSON response', (e as Error).message);
                 reject(e);
                 return;
               }
@@ -163,8 +164,8 @@ export class JsonService {
               try {
                 resolve(JSON.parse(req.responseText));
                 return;
-              } catch (e: any) {
-                Log.error('JsonService.postForm: Error parsing JSON response', e.message);
+              } catch (e: unknown) {
+                Log.error('JsonService.postForm: Error parsing JSON response', (e as Error).message);
                 reject(e);
                 return;
               }
@@ -186,8 +187,8 @@ export class JsonService {
                   reject(new Error(body.error));
                   return;
                 }
-              } catch (e: any) {
-                Log.error('JsonService.postForm: Error parsing JSON response', e.message);
+              } catch (e: unknown) {
+                Log.error('JsonService.postForm: Error parsing JSON response', (e as Error).message);
                 reject(e);
                 return;
               }
@@ -236,7 +237,8 @@ export interface OidcMetadata {
   check_session_iframe?: string;
   revocation_endpoint?: string;
   jwks_uri?: string;
-  [key: string]: any;
+  // OIDC discovery documents may include provider-specific extension fields.
+  [key: string]: unknown;
 }
 
 export interface MetadataSettings {
@@ -244,7 +246,7 @@ export interface MetadataSettings {
   metadataUrl?: string;
   metadata?: OidcMetadata;
   metadataSeed?: Partial<OidcMetadata>;
-  signingKeys?: any[];
+  signingKeys?: JwkKey[];
 }
 
 export class MetadataService {

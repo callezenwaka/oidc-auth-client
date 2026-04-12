@@ -1,12 +1,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 import { Log } from '../utils/Log.js';
-
-export interface UserProfile {
-  sub: string;
-  sid?: string;
-  [key: string]: any;
-}
+import type { UserProfile } from '../types/user.js';
 
 export interface UserData {
   id_token?: string;
@@ -17,7 +12,7 @@ export interface UserData {
   scope?: string;
   profile?: UserProfile;
   expires_at?: number;
-  state?: any;
+  state?: unknown;
 }
 
 export class User {
@@ -29,7 +24,7 @@ export class User {
   scope: string;
   profile: UserProfile;
   expires_at: number | undefined;
-  state: any;
+  state: unknown;
 
   constructor({
     id_token = '',

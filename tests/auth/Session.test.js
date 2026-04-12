@@ -98,10 +98,10 @@ describe('auth/SigninState', () => {
     expect(state.code_verifier.length).toBeGreaterThan(0);
   });
 
-  it('should generate code_challenge from code_verifier', () => {
-    const state = new SigninState({ code_verifier: true });
+  it('should store pre-computed code_challenge', () => {
+    const state = new SigninState({ code_verifier: true, code_challenge: 'abc123' });
     expect(state.code_challenge).toBeDefined();
-    expect(state.code_challenge.length).toBeGreaterThan(0);
+    expect(state.code_challenge).toBe('abc123');
   });
 
   it('should store signin-specific properties', () => {

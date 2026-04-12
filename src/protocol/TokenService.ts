@@ -3,9 +3,10 @@
 import { Log } from '../utils/Log.js';
 import { Global } from '../utils/Global.js';
 import { JsonService, MetadataService } from '../services/Http.js';
+import type { JwkKey } from '../types/crypto.js';
 import { JoseUtil } from '../crypto/Crypto.js';
 import type { JoseUtilType } from '../crypto/Crypto.js';
-import type { ParsedJwt } from '../crypto/Crypto.js';
+import type { ParsedJwt } from '../types/crypto.js';
 
 export interface TokenSettings {
   authority?: string;
@@ -15,7 +16,6 @@ export interface TokenSettings {
   client_authentication?: string;
   userInfoJwtIssuer?: string;
   clockSkew?: number;
-  [key: string]: any;
 }
 
 //=============================================================================
@@ -241,16 +241,16 @@ export class UserInfoService {
           }
 
           Log.debug('UserInfoService._getClaimsFromJwt: Received signing keys');
-          let key: any;
+          let key: JwkKey | undefined;
           if (!kid) {
-            keys = this._filterByAlg(keys, jwt.header.alg);
+            keys = this._filterByAlg(keys, jwt.header.alg ?? '');
             if (keys.length > 1) {
               Log.error('UserInfoService._getClaimsFromJwt: No kid found in id_token and more than one key found in metadata');
               return Promise.reject(new Error('No kid found in id_token and more than one key found in metadata'));
             }
             key = keys[0];
           } else {
-            key = keys.find((k: any) => k.kid === kid);
+            key = keys.find((k: JwkKey) => k.kid === kid);
           }
 
           if (!key) {
@@ -269,13 +269,13 @@ export class UserInfoService {
             });
         });
       });
-    } catch (e: any) {
-      Log.error('UserInfoService._getClaimsFromJwt: Error parsing JWT response', e.message);
+    } catch (e: unknown) {
+      Log.error('UserInfoService._getClaimsFromJwt: Error parsing JWT response', (e as Error).message);
       return Promise.reject(e);
     }
   }
 
-  private _filterByAlg(keys: any[], alg: string): any[] {
+  private _filterByAlg(keys: JwkKey[], alg: string): JwkKey[] {
     let kty: string | null = null;
     if (alg.startsWith('RS')) kty = 'RSA';
     else if (alg.startsWith('PS')) kty = 'PS';

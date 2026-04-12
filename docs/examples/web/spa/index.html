@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>oidc-auth-client — Vanilla JS</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>oidc-auth-client</h1>
+    <div id="auth-buttons">
+      <button type="button" id="login-btn">Sign In</button>
+      <button type="button" id="logout-btn" hidden>Sign Out</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="guest-section">
+      <p>Sign in to view your profile and call a protected API.</p>
+    </section>
+
+    <section id="user-section" hidden>
+      <div class="card">
+        <h2>Profile</h2>
+        <p><strong>Name:</strong> <span id="user-name"></span></p>
+        <p><strong>Email:</strong> <span id="user-email"></span></p>
+        <p><strong>Subject:</strong> <span id="user-sub"></span></p>
+      </div>
+
+      <div class="card">
+        <h2>API</h2>
+        <button type="button" id="call-api-btn">Call GET /api/me</button>
+        <pre id="api-result"></pre>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

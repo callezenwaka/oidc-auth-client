@@ -1,225 +1,240 @@
-# OIDC Client
+# oidc-auth-client
 
-OpenID Connect (OIDC) and OAuth 2.0 client library for JavaScript applications.
+OpenID Connect (OIDC) and OAuth 2.0 client library for JavaScript/TypeScript browser applications.
 
-## Project Structure
+Handles authentication flows (redirect, popup, silent iframe), token lifecycle (storage, expiry, auto-renewal), session monitoring, and logout — against any standards-compliant OIDC provider (Keycloak, Auth0, Ory Hydra, Azure AD, etc.).
 
-This project has been refactored to follow domain-driven design principles, consolidating 43 source files into 18 organized modules:
+## Installation
 
-```
-src/
-├── auth/           # Authentication & authorization core
-│   ├── Client.js   # OidcClient + UserManager
-│   ├── Settings.js # OidcClientSettings + UserManagerSettings (composition pattern)
-│   ├── Events.js   # Event system (Event, AccessTokenEvents, UserManagerEvents)
-│   └── Session.js  # State management (State, SigninState, SessionMonitor, SilentRenewService)
-│
-├── protocol/       # OIDC protocol implementation
-│   ├── Requests.js          # SigninRequest + SignoutRequest
-│   ├── Responses.js         # SigninResponse + SignoutResponse + ErrorResponse
-│   ├── ResponseValidator.js # Response validation
-│   └── TokenService.js      # TokenClient + TokenRevocationClient + UserInfoService
-│
-├── navigation/     # Browser navigation strategies
-│   └── Navigator.js # All navigators (Redirect, Popup, IFrame, Cordova)
-│
-├── storage/        # Client-side storage
-│   └── Storage.js  # WebStorageStateStore + InMemoryWebStorage
-│
-├── crypto/         # Cryptographic operations
-│   └── Crypto.js   # JoseUtil + generateRandom (factory pattern)
-│
-├── services/       # Infrastructure services
-│   ├── Http.js     # UrlUtility + JsonService + MetadataService
-│   └── Timer.js    # Timer + ClockService
-│
-├── models/         # Domain models
-│   └── User.js     # User model
-│
-├── types/          # Type definitions
-│   ├── index.d.ts  # TypeScript definitions
-│   └── jsdoc.js    # JSDoc definitions
-│
-└── utils/          # Utilities
-    ├── Log.js      # Logging
-    └── Global.js   # Global object access
+```bash
+npm install oidc-auth-client
 ```
 
-## Architecture Highlights
+## Quick Start
 
-### Composition over Inheritance
-The codebase uses **composition instead of inheritance** for better maintainability:
-- `UserManagerSettings` contains an `OidcClientSettings` instance and delegates properties via getters
-- This prevents deep inheritance chains and makes dependencies explicit
+```typescript
+import { UserManager } from 'oidc-auth-client';
 
-### Domain-Driven Organization
-Files are organized by domain responsibility:
-- **auth/** - Core authentication functionality
-- **protocol/** - OIDC/OAuth protocol implementation
-- **navigation/** - Browser navigation patterns
-- **storage/** - Persistence layer
-- **crypto/** - Security operations
-- **services/** - Infrastructure concerns
-- **models/** - Business entities
-- **types/** - Type safety
-- **utils/** - Common utilities
-
-### Factory Pattern for Crypto
-The crypto layer uses factory functions to support multiple implementations:
-```javascript
-export function getJoseUtil({ jws, KeyUtil, ... }) {
-  return class JoseUtil { ... }
-}
-```
-
-## Usage
-
-### Basic Example
-```javascript
-import { UserManager } from './index.js';
-
-const config = {
-  authority: 'https://your-authority.com',
+const userManager = new UserManager({
+  authority: 'https://your-idp.com',
   client_id: 'your-client-id',
   redirect_uri: 'https://your-app.com/callback',
   response_type: 'code',
-  scope: 'openid profile',
-};
+  scope: 'openid profile email',
+});
 
-const userManager = new UserManager(config);
-
-// Sign in
+// Initiate login
 await userManager.signinRedirect();
 
-// Handle callback
+// Handle the callback page
 const user = await userManager.signinRedirectCallback();
+console.log(user.profile.sub);
 
-// Get current user
-const currentUser = await userManager.getUser();
+// Get the current user
+const current = await userManager.getUser();
+
+// Sign out
+await userManager.signoutRedirect();
 ```
 
-### TypeScript Support
-TypeScript definitions are available in `src/types/index.d.ts`:
+## TypeScript Usage
+
+Types are generated from source — no separate `@types` package needed.
+
 ```typescript
-import { UserManager, UserManagerSettings } from 'oidc-client';
+import {
+  UserManager,
+  UserManagerSettings,
+  User,
+  UserProfile,
+} from 'oidc-auth-client';
 
 const settings: UserManagerSettings = {
-  authority: 'https://your-authority.com',
+  authority: 'https://your-idp.com',
   client_id: 'your-client-id',
-  // ...
+  redirect_uri: 'https://your-app.com/callback',
+  response_type: 'code',
+  scope: 'openid profile email',
+  automaticSilentRenew: true,
+  silent_redirect_uri: 'https://your-app.com/silent-renew.html',
 };
+
+const userManager = new UserManager(settings);
+
+userManager.events.addUserLoaded((user: User) => {
+  console.log('User loaded:', user.profile.sub);
+});
+
+userManager.events.addAccessTokenExpired(() => {
+  console.log('Token expired');
+});
 ```
 
-### JSDoc Type Hints
-JSDoc definitions in `src/types/jsdoc.js` provide IntelliSense in editors:
-```javascript
-/**
- * @type {import('./src/types/jsdoc.js').UserManagerSettingsConfig}
- */
-const config = { ... };
+## Subpath Imports
+
+```typescript
+// Main entry — all public exports
+import { UserManager, OidcClient } from 'oidc-auth-client';
+
+// Auth only
+import { UserManager } from 'oidc-auth-client/auth';
+
+// Protocol utilities
+import { TokenRevocationClient } from 'oidc-auth-client/protocol';
+
+// Storage
+import { WebStorageStateStore, InMemoryWebStorage } from 'oidc-auth-client/storage';
+
+// Utilities
+import { Log } from 'oidc-auth-client/utils';
 ```
 
 ## Key Features
 
-- **OpenID Connect & OAuth 2.0** - Full protocol support
-- **Multiple Flow Types** - Authorization Code, Implicit, Hybrid
-- **PKCE Support** - Proof Key for Code Exchange
-- **Silent Renew** - Automatic token refresh
-- **Session Management** - OP iframe monitoring
-- **Popup & Redirect** - Flexible authentication UX
-- **Cordova Support** - Mobile app integration
-- **TypeScript** - Full type definitions
-- **Modular Architecture** - Clean separation of concerns
+- **Authorization Code + PKCE** — secure default; hybrid flow not supported
+- **Silent Renew** — automatic token refresh via hidden iframe
+- **Session Monitoring** — OP check_session iframe integration
+- **Popup & Redirect** — flexible authentication UX
+- **Cordova** — mobile WebView support
+- **Web Crypto API** — native browser crypto via [`jose`](https://github.com/panva/jose); no polyfills
+- **TypeScript** — source-level types; declarations auto-generated by `tsc`
+- **Tree-shakeable** — `sideEffects: false`
 
-## Exports
+## Public API
 
-All public APIs are exported from the root `index.js`:
-
-```javascript
+```typescript
 // Auth
 export { OidcClient, UserManager }
+export type { CreateSigninRequestArgs, CreateSignoutRequestArgs, UserManagerSigninArgs }
 export { OidcClientSettings, UserManagerSettings }
-export { AccessTokenEvents }
-export { SessionMonitor }
-
-// Protocol
-export { TokenRevocationClient }
-
-// Navigation
-export { CheckSessionIFrame }
-export { CordovaPopupNavigator, CordovaIFrameNavigator }
-
-// Storage
-export { WebStorageStateStore, InMemoryWebStorage }
-
-// Services
-export { MetadataService }
+export type { OidcClientSettingsArgs, UserManagerSettingsArgs }
+export { AccessTokenEvents, UserManagerEvents }
+export { SessionMonitor, SilentRenewService, State, SigninState }
+export type { StateArgs, SigninStateArgs }
 
 // Models
 export { User }
+export type { UserData, UserProfile }
+
+// Storage
+export { WebStorageStateStore, InMemoryWebStorage }
+export type { StateStore }
+
+// Services
+export { MetadataService }
+export type { OidcMetadata }
+
+// Navigation
+export { CheckSessionIFrame, RedirectNavigator, PopupNavigator, IFrameNavigator }
+export { CordovaPopupNavigator, CordovaIFrameNavigator }
+export type { NavigateParams }
+
+// Protocol
+export { TokenRevocationClient }
+export type { TokenSettings }
 
 // Utils
 export { Log, Global }
-
-// Version
-export { Version }
 ```
 
-## Migration from Previous Versions
+## Project Structure
 
-If you're upgrading from the pre-consolidation version, update your imports:
-
-**Before:**
-```javascript
-import { UserManager } from './src/UserManager.js';
-import { OidcClientSettings } from './src/OidcClientSettings.js';
+```
+src/
+├── auth/           # Authentication core
+│   ├── Client.ts   # OidcClient + UserManager
+│   ├── Settings.ts # OidcClientSettings + UserManagerSettings
+│   ├── Events.ts   # AccessTokenEvents + UserManagerEvents
+│   └── Session.ts  # State, SigninState, SessionMonitor, SilentRenewService
+│
+├── protocol/       # OIDC protocol
+│   ├── Requests.ts          # SigninRequest + SignoutRequest
+│   ├── Responses.ts         # SigninResponse + SignoutResponse + ErrorResponse
+│   ├── ResponseValidator.ts # Token + claims validation
+│   └── TokenService.ts      # TokenClient + TokenRevocationClient + UserInfoService
+│
+├── navigation/     # Browser navigation strategies
+│   └── Navigator.ts # Redirect, Popup, IFrame, Cordova navigators
+│
+├── storage/        # Client-side persistence
+│   └── Storage.ts  # WebStorageStateStore + InMemoryWebStorage
+│
+├── crypto/         # Cryptographic operations
+│   └── Crypto.ts   # JoseUtil (jose-based) + generateRandom
+│
+├── services/       # Infrastructure
+│   ├── Http.ts     # UrlUtility + JsonService + MetadataService
+│   └── Timer.ts    # Timer + ClockService
+│
+├── models/         # Domain models
+│   └── User.ts     # User
+│
+├── types/          # Shared contracts
+│   ├── navigator.ts # NavigateParams, NavigatorResponse, INavigator
+│   ├── crypto.ts    # JwtHeader, JwkKey, JwtPayload, ParsedJwt
+│   ├── user.ts      # UserProfile
+│   └── storage.ts   # StateStore
+│
+└── utils/          # Utilities
+    ├── Log.ts      # Logging
+    ├── Global.ts   # Global timer/interval access
+    └── Event.ts    # EventCallback + EventEmitter
 ```
 
-**After:**
-```javascript
-import { UserManager, OidcClientSettings } from './index.js';
-// or
-import { UserManager } from './src/auth/Client.js';
-import { OidcClientSettings } from './src/auth/Settings.js';
-```
+## Examples
 
-All exports remain backward compatible.
+See [docs/examples/](docs/examples/) for working integrations:
 
-## Benefits of Consolidation
+**Web**
 
-- **62% reduction** in file count (43 → 18 files)
-- **Improved discoverability** - Related code is co-located
-- **Better IDE navigation** - Fewer files to search through
-- **Clearer dependencies** - Import paths reflect architecture
-- **Easier maintenance** - Domain boundaries are explicit
-- **Type safety** - Full TypeScript and JSDoc support
+| Example | Description |
+|---------|-------------|
+| [docs/examples/web/spa/](docs/examples/web/spa/) | Vanilla JS single-page app |
+| [docs/examples/web/react/](docs/examples/web/react/) | React with `useAuth` hook and context |
+| [docs/examples/web/vue/](docs/examples/web/vue/) | Vue 3 with `useAuth` composable |
 
-## Testing
+**Guides**
 
-Comprehensive test suite with 100+ tests using Vitest:
+| Example | Description |
+|---------|-------------|
+| [docs/examples/api/](docs/examples/api/) | Authenticated API calls (fetch, axios) |
+| [docs/examples/advanced/](docs/examples/advanced/) | Popup, silent renew, multi-tab sync |
+| [docs/examples/provider/](docs/examples/provider/) | Identity provider configurations |
+| [docs/examples/security/](docs/examples/security/) | Security best practices |
+
+## Scripts
+
+| Script | Command | Purpose |
+|--------|---------|---------|
+| `build` | `tsc` | Compile TypeScript → `dist/` |
+| `type-check` | `tsc --noEmit` | Type-check without emitting |
+| `test` | `vitest` | Watch mode |
+| `test:run` | `vitest run` | Run once (CI) |
+| `test:coverage` | `vitest run --coverage` | Coverage report |
+| `test:package` | `node dist/index.js` | Smoke-test compiled output |
 
 ```bash
-# Run all tests
-npm test
+# Run tests
+npm run test:run        # 13 test files, 170 tests
 
-# Watch mode
-npm run test:watch
+# Build
+npm run build           # compiles to dist/
 
-# Coverage report
-npm run test:coverage
+# Type check
+npm run type-check
 ```
 
-**Test Coverage:**
-- All 18 consolidated modules
-- Composition pattern validation (Settings layer)
-- Event system hierarchy
-- Import path verification
-- State serialization
+## Versioning
 
-See [tests/README.md](tests/README.md) and [TEST_SUITE_SUMMARY.md](TEST_SUITE_SUMMARY.md) for details.
+Version is managed entirely by the CI/CD pipeline from git tags. Do not edit `version` in `package.json` manually.
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ## License
 
-Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
 
 Copyright (c) Callis Ezenwaka. All rights reserved.

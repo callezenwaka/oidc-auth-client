@@ -17,7 +17,7 @@ export interface SigninRequestArgs {
   scope: string;
   authority: string;
   // optional
-  data?: any;
+  data?: unknown;
   prompt?: string;
   display?: string;
   max_age?: number;
@@ -32,8 +32,9 @@ export interface SigninRequestArgs {
   extraQueryParams?: Record<string, string>;
   request_type?: string;
   client_secret?: string;
-  extraTokenParams?: Record<string, any>;
+  extraTokenParams?: Record<string, unknown>;
   skipUserInfo?: boolean;
+  code_challenge?: string;
 }
 
 export class SigninRequest {
@@ -45,7 +46,7 @@ export class SigninRequest {
       url: rawUrl, client_id, redirect_uri, response_type, scope, authority,
       data, prompt, display, max_age, ui_locales, id_token_hint, login_hint,
       acr_values, resource, request, request_uri, extraQueryParams,
-      request_type, client_secret, extraTokenParams, skipUserInfo,
+      request_type, client_secret, extraTokenParams, skipUserInfo, code_challenge,
     } = args;
 
     if (!rawUrl) { Log.error('SigninRequest.ctor: No url passed'); throw new Error('url'); }
@@ -66,6 +67,7 @@ export class SigninRequest {
       authority,
       redirect_uri,
       code_verifier: code,
+      code_challenge,
       request_type,
       response_mode: response_mode_resolved,
       client_secret,
@@ -88,7 +90,7 @@ export class SigninRequest {
       url = UrlUtility.addQueryParam(url, 'code_challenge_method', 'S256');
     }
 
-    const optional: Record<string, any> = {
+    const optional: Record<string, unknown> = {
       prompt, display, max_age, ui_locales, id_token_hint,
       login_hint, acr_values, resource, request, request_uri,
       response_mode: response_mode_resolved,
@@ -124,7 +126,7 @@ export interface SignoutRequestArgs {
   url: string;
   id_token_hint?: string;
   post_logout_redirect_uri?: string;
-  data?: any;
+  data?: unknown;
   extraQueryParams?: Record<string, string>;
   request_type?: string;
 }

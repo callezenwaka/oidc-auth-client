@@ -2,37 +2,29 @@
 
 import { Log } from '../utils/Log.js';
 import { UrlUtility } from '../services/Http.js';
+import type { NavigateParams, NavigatorResponse, NavigatorHandle } from '../types/navigator.js';
+
+// Re-export NavigateParams so index.ts continues to work unchanged.
+export type { NavigateParams } from '../types/navigator.js';
 
 //=============================================================================
 // RedirectNavigator - Full page redirect navigation
 //=============================================================================
-
-export interface NavigateParams {
-  url: string;
-  useReplaceToNavigate?: boolean;
-  id?: string;
-  silentRequestTimeout?: number;
-  startUrl?: string;
-}
 
 export class RedirectNavigator {
   prepare(): Promise<RedirectNavigator> {
     return Promise.resolve(this);
   }
 
-  navigate(params: NavigateParams): Promise<void> {
-    if (!params || !params.url) {
-      Log.error('RedirectNavigator.navigate: No url provided');
-      return Promise.reject(new Error('No url provided'));
-    }
-
+  navigate(params: NavigateParams & { url: string }): Promise<NavigatorResponse> {
     if (params.useReplaceToNavigate) {
       window.location.replace(params.url);
     } else {
       window.location.href = params.url;
     }
-
-    return Promise.resolve();
+    // Page navigates away; resolve immediately so callers in the redirect
+    // path (which never read the result) still get a typed promise.
+    return Promise.resolve({ url: params.url });
   }
 
   get url(): string {
@@ -45,24 +37,22 @@ export class RedirectNavigator {
 //=============================================================================
 
 const CheckForPopupClosedInterval = 500;
-const DefaultPopupFeatures =
-  'location=no,toolbar=no,width=500,height=500,left=100,top=100;';
+const DefaultPopupFeatures = 'location=no,toolbar=no,width=500,height=500,left=100,top=100;';
 const DefaultPopupTarget = '_blank';
 
-export interface PopupWindowParams {
-  popupWindowTarget?: string;
-  popupWindowFeatures?: string;
-}
+// Type for the per-popup callback stored on window.opener.
+type PopupCallback = (url: string, keepOpen: boolean) => void;
+type WindowWithCallbacks = Window & Record<string, PopupCallback | undefined>;
 
-export class PopupWindow {
-  private _promise: Promise<any>;
-  private _resolve!: (value: any) => void;
-  private _reject!: (reason?: any) => void;
+export class PopupWindow implements NavigatorHandle {
+  private _promise: Promise<NavigatorResponse>;
+  private _resolve!: (value: NavigatorResponse) => void;
+  private _reject!: (reason?: unknown) => void;
   private _popup: Window | null;
   private _checkForPopupClosedTimer: ReturnType<typeof setInterval> | null = null;
   private _id: string | undefined;
 
-  constructor(params: PopupWindowParams & NavigateParams) {
+  constructor(params: NavigateParams) {
     this._promise = new Promise((resolve, reject) => {
       this._resolve = resolve;
       this._reject = reject;
@@ -81,32 +71,31 @@ export class PopupWindow {
     }
   }
 
-  get promise(): Promise<any> {
+  get promise(): Promise<NavigatorResponse> {
     return this._promise;
   }
 
-  navigate(params: NavigateParams): Promise<any> {
+  navigate(params: NavigateParams & { url: string }): Promise<NavigatorResponse> {
     if (!this._popup) {
       this._error('PopupWindow.navigate: Error opening popup window');
-    } else if (!params || !params.url) {
+    } else if (!params.url) {
       this._error('PopupWindow.navigate: no url provided');
-      this._error('No url provided');
     } else {
       Log.debug('PopupWindow.navigate: Setting URL in popup');
 
       this._id = params.id;
       if (this._id) {
-        (window as any)['popupCallback_' + params.id] = this._callback.bind(this);
+        (window as unknown as WindowWithCallbacks)[`popupCallback_${this._id}`] = this._callback.bind(this);
       }
 
       this._popup.focus();
-      (this._popup as any).location = params.url;
+      this._popup.location.href = params.url;
     }
 
     return this.promise;
   }
 
-  private _success(data: any): void {
+  private _success(data: NavigatorResponse): void {
     Log.debug('PopupWindow.callback: Successful response from popup window');
     this._cleanup();
     this._resolve(data);
@@ -130,7 +119,7 @@ export class PopupWindow {
       this._checkForPopupClosedTimer = null;
     }
 
-    delete (window as any)['popupCallback_' + this._id];
+    delete (window as unknown as WindowWithCallbacks)[`popupCallback_${this._id}`];
 
     if (this._popup && !keepOpen) {
       this._popup.close();
@@ -163,11 +152,11 @@ export class PopupWindow {
         const data = UrlUtility.parseUrlFragment(url, delimiter);
 
         if (data.state) {
-          const name = 'popupCallback_' + data.state;
-          const callback = window.opener[name];
+          const name = `popupCallback_${data.state}`;
+          const callback = (window.opener as unknown as WindowWithCallbacks)[name];
           if (callback) {
             Log.debug('PopupWindow.notifyOpener: passing url message to opener');
-            callback(url, keepOpen);
+            callback(url, keepOpen ?? false);
           } else {
             Log.warn('PopupWindow.notifyOpener: no matching callback found on opener');
           }
@@ -186,7 +175,7 @@ export class PopupWindow {
 //=============================================================================
 
 export class PopupNavigator {
-  prepare(params: PopupWindowParams & NavigateParams): Promise<PopupWindow> {
+  prepare(params: NavigateParams): Promise<PopupWindow> {
     const popup = new PopupWindow(params);
     return Promise.resolve(popup);
   }
@@ -209,10 +198,10 @@ export class PopupNavigator {
 
 const DefaultTimeout = 10000;
 
-export class IFrameWindow {
-  private _promise: Promise<any>;
-  private _resolve!: (value: any) => void;
-  private _reject!: (reason?: any) => void;
+export class IFrameWindow implements NavigatorHandle {
+  private _promise: Promise<NavigatorResponse>;
+  private _resolve!: (value: NavigatorResponse) => void;
+  private _reject!: (reason?: unknown) => void;
   private _boundMessageEvent: ((e: MessageEvent) => void) | null;
   private _frame: HTMLIFrameElement | null;
   private _timer: ReturnType<typeof setTimeout> | null = null;
@@ -237,24 +226,20 @@ export class IFrameWindow {
     window.document.body.appendChild(this._frame);
   }
 
-  navigate(params: NavigateParams): Promise<any> {
-    if (!params || !params.url) {
-      this._error('No url provided');
-    } else {
-      const timeout = params.silentRequestTimeout || DefaultTimeout;
-      Log.debug('IFrameWindow.navigate: Using timeout of:', timeout);
-      this._timer = window.setTimeout(this._timeout.bind(this), timeout);
-      this._frame!.src = params.url;
-    }
+  navigate(params: NavigateParams & { url: string }): Promise<NavigatorResponse> {
+    const timeout = params.silentRequestTimeout || DefaultTimeout;
+    Log.debug('IFrameWindow.navigate: Using timeout of:', timeout);
+    this._timer = window.setTimeout(this._timeout.bind(this), timeout);
+    this._frame!.src = params.url;
 
     return this.promise;
   }
 
-  get promise(): Promise<any> {
+  get promise(): Promise<NavigatorResponse> {
     return this._promise;
   }
 
-  private _success(data: any): void {
+  private _success(data: NavigatorResponse): void {
     this._cleanup();
     Log.debug('IFrameWindow: Successful response from frame window');
     this._resolve(data);
@@ -458,24 +443,35 @@ export class CheckSessionIFrame {
 const DefaultCordovaPopupFeatures = 'location=no,toolbar=no,zoom=no';
 const DefaultCordovaPopupTarget = '_blank';
 
-export interface CordovaPopupParams {
-  popupWindowFeatures?: string;
-  popupWindowTarget?: string;
-  startUrl?: string;
+/** Minimal interface for a Cordova InAppBrowser reference. */
+interface CordovaInAppBrowserRef {
+  addEventListener(event: string, handler: (event: { url: string }) => void, capture: boolean): void;
+  removeEventListener(event: string, handler: (event: { url: string }) => void, capture: boolean): void;
+  close(): void;
 }
 
-export class CordovaPopupWindow {
-  private _promise: Promise<any>;
-  private _resolve!: (value: any) => void;
-  private _reject!: (reason?: any) => void;
-  private _popup: any;
-  private _exitCallbackEvent: ((e: any) => void) | undefined;
-  private _loadStartCallbackEvent: ((e: any) => void) | undefined;
+/** Cordova's window extension (plugin present at runtime, not in DOM types). */
+interface CordovaWindow extends Window {
+  cordova?: {
+    require(module: string): { metadata: Record<string, unknown> };
+    InAppBrowser: {
+      open(url: string, target: string, features: string): CordovaInAppBrowserRef;
+    };
+  };
+}
+
+export class CordovaPopupWindow implements NavigatorHandle {
+  private _promise: Promise<NavigatorResponse>;
+  private _resolve!: (value: NavigatorResponse) => void;
+  private _reject!: (reason?: unknown) => void;
+  private _popup: CordovaInAppBrowserRef | null = null;
+  private _exitCallbackEvent: ((e: { url: string }) => void) | undefined;
+  private _loadStartCallbackEvent: ((e: { url: string }) => void) | undefined;
   features: string;
   target: string;
   redirect_uri: string | undefined;
 
-  constructor(params: CordovaPopupParams & NavigateParams) {
+  constructor(params: NavigateParams) {
     this._promise = new Promise((resolve, reject) => {
       this._resolve = resolve;
       this._reject = reject;
@@ -488,7 +484,7 @@ export class CordovaPopupWindow {
     Log.debug('CordovaPopupWindow.ctor: redirect_uri: ' + this.redirect_uri);
   }
 
-  private _isInAppBrowserInstalled(cordovaMetadata: Record<string, any>): boolean {
+  private _isInAppBrowserInstalled(cordovaMetadata: Record<string, unknown>): boolean {
     return [
       'cordova-plugin-inappbrowser',
       'cordova-plugin-inappbrowser.inappbrowser',
@@ -496,36 +492,34 @@ export class CordovaPopupWindow {
     ].some(name => Object.prototype.hasOwnProperty.call(cordovaMetadata, name));
   }
 
-  navigate(params: NavigateParams): Promise<any> {
-    if (!params || !params.url) {
-      this._error('No url provided');
-    } else {
-      const win = window as any;
-      if (!win.cordova) {
-        return this._errorAndReturn('cordova is undefined');
-      }
-
-      const cordovaMetadata = win.cordova.require('cordova/plugin_list').metadata;
-      if (this._isInAppBrowserInstalled(cordovaMetadata) === false) {
-        return this._errorAndReturn('InAppBrowser plugin not found');
-      }
-      this._popup = win.cordova.InAppBrowser.open(params.url, this.target, this.features);
-      if (this._popup) {
-        Log.debug('CordovaPopupWindow.navigate: popup successfully created');
-
-        this._exitCallbackEvent = this._exitCallback.bind(this);
-        this._loadStartCallbackEvent = this._loadStartCallback.bind(this);
-
-        this._popup.addEventListener('exit', this._exitCallbackEvent, false);
-        this._popup.addEventListener('loadstart', this._loadStartCallbackEvent, false);
-      } else {
-        this._error('Error opening popup window');
-      }
+  navigate(params: NavigateParams & { url: string }): Promise<NavigatorResponse> {
+    const win = window as CordovaWindow;
+    if (!win.cordova) {
+      return this._errorAndReturn('cordova is undefined');
     }
+
+    const cordovaMetadata = win.cordova.require('cordova/plugin_list').metadata;
+    if (!this._isInAppBrowserInstalled(cordovaMetadata)) {
+      return this._errorAndReturn('InAppBrowser plugin not found');
+    }
+
+    this._popup = win.cordova.InAppBrowser.open(params.url, this.target, this.features);
+    if (this._popup) {
+      Log.debug('CordovaPopupWindow.navigate: popup successfully created');
+
+      this._exitCallbackEvent = this._exitCallback.bind(this);
+      this._loadStartCallbackEvent = this._loadStartCallback.bind(this);
+
+      this._popup.addEventListener('exit', this._exitCallbackEvent, false);
+      this._popup.addEventListener('loadstart', this._loadStartCallbackEvent, false);
+    } else {
+      this._error('Error opening popup window');
+    }
+
     return this.promise;
   }
 
-  get promise(): Promise<any> {
+  get promise(): Promise<NavigatorResponse> {
     return this._promise;
   }
 
@@ -535,11 +529,11 @@ export class CordovaPopupWindow {
     }
   }
 
-  private _exitCallback(message: any): void {
-    this._error(message);
+  private _exitCallback(_event: { url: string }): void {
+    this._error('Popup closed');
   }
 
-  private _success(data: any): void {
+  private _success(data: NavigatorResponse): void {
     this._cleanup();
     Log.debug('CordovaPopupWindow: Successful response from cordova popup window');
     this._resolve(data);
@@ -551,7 +545,7 @@ export class CordovaPopupWindow {
     this._reject(new Error(message));
   }
 
-  private _errorAndReturn(message: string): Promise<any> {
+  private _errorAndReturn(message: string): Promise<NavigatorResponse> {
     this._error(message);
     return this.promise;
   }
@@ -563,8 +557,8 @@ export class CordovaPopupWindow {
   private _cleanup(): void {
     if (this._popup) {
       Log.debug('CordovaPopupWindow: cleaning up popup');
-      this._popup.removeEventListener('exit', this._exitCallbackEvent, false);
-      this._popup.removeEventListener('loadstart', this._loadStartCallbackEvent, false);
+      this._popup.removeEventListener('exit', this._exitCallbackEvent!, false);
+      this._popup.removeEventListener('loadstart', this._loadStartCallbackEvent!, false);
       this._popup.close();
     }
     this._popup = null;
@@ -576,7 +570,7 @@ export class CordovaPopupWindow {
 //=============================================================================
 
 export class CordovaPopupNavigator {
-  prepare(params: CordovaPopupParams & NavigateParams): Promise<CordovaPopupWindow> {
+  prepare(params: NavigateParams): Promise<CordovaPopupWindow> {
     const popup = new CordovaPopupWindow(params);
     return Promise.resolve(popup);
   }
@@ -587,7 +581,7 @@ export class CordovaPopupNavigator {
 //=============================================================================
 
 export class CordovaIFrameNavigator {
-  prepare(params: CordovaPopupParams & NavigateParams): Promise<CordovaPopupWindow> {
+  prepare(params: NavigateParams): Promise<CordovaPopupWindow> {
     params.popupWindowFeatures = 'hidden=yes';
     const popup = new CordovaPopupWindow(params);
     return Promise.resolve(popup);

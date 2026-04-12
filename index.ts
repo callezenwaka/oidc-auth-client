@@ -7,11 +7,12 @@ export { Global } from './src/utils/Global.js';
 
 // Models
 export { User } from './src/models/User.js';
-export type { UserProfile, UserData } from './src/models/User.js';
+export type { UserData } from './src/models/User.js';
+export type { UserProfile } from './src/types/user.js';
 
 // Storage
 export { WebStorageStateStore, InMemoryWebStorage } from './src/storage/Storage.js';
-export type { StateStore } from './src/storage/Storage.js';
+export type { StateStore } from './src/types/storage.js';
 
 // Services
 export { MetadataService } from './src/services/Http.js';

@@ -9,7 +9,8 @@ import { RedirectNavigator, PopupNavigator, IFrameNavigator } from '../navigatio
 import { Global } from '../utils/Global.js';
 import { SigninRequest } from '../protocol/Requests.js';
 import type { OidcMetadata } from '../services/Http.js';
-import type { StateStore } from '../storage/Storage.js';
+import type { JwkKey } from '../types/crypto.js';
+import type { StateStore } from '../types/storage.js';
 
 const OidcMetadataUrlPath = '.well-known/openid-configuration';
 
@@ -30,7 +31,7 @@ export interface OidcClientSettingsArgs {
   authority?: string;
   metadataUrl?: string;
   metadata?: OidcMetadata;
-  signingKeys?: any[];
+  signingKeys?: JwkKey[];
   metadataSeed?: Partial<OidcMetadata>;
   // client related
   client_id?: string;
@@ -62,7 +63,7 @@ export interface OidcClientSettingsArgs {
   MetadataServiceCtor?: typeof MetadataService;
   // extra params
   extraQueryParams?: Record<string, string>;
-  extraTokenParams?: Record<string, any>;
+  extraTokenParams?: Record<string, unknown>;
 }
 
 export class OidcClientSettings {
@@ -70,7 +71,7 @@ export class OidcClientSettings {
   private _metadataUrl: string | undefined;
   private _metadata: OidcMetadata | undefined;
   private _metadataSeed: Partial<OidcMetadata> | undefined;
-  private _signingKeys: any[] | undefined;
+  private _signingKeys: JwkKey[] | undefined;
 
   private _client_id: string | undefined;
   private _client_secret: string | undefined;
@@ -101,7 +102,7 @@ export class OidcClientSettings {
   private _metadataService: MetadataService;
 
   private _extraQueryParams: Record<string, string>;
-  private _extraTokenParams: Record<string, any>;
+  private _extraTokenParams: Record<string, unknown>;
 
   constructor({
     // metadata related
@@ -236,8 +237,8 @@ export class OidcClientSettings {
   get metadataSeed(): Partial<OidcMetadata> | undefined { return this._metadataSeed; }
   set metadataSeed(value: Partial<OidcMetadata> | undefined) { this._metadataSeed = value; }
 
-  get signingKeys(): any[] | undefined { return this._signingKeys; }
-  set signingKeys(value: any[] | undefined) { this._signingKeys = value; }
+  get signingKeys(): JwkKey[] | undefined { return this._signingKeys; }
+  set signingKeys(value: JwkKey[] | undefined) { this._signingKeys = value; }
 
   // behavior flags
   get filterProtocolClaims(): boolean { return this._filterProtocolClaims; }
@@ -262,8 +263,8 @@ export class OidcClientSettings {
   }
 
   // extra token params
-  get extraTokenParams(): Record<string, any> { return this._extraTokenParams; }
-  set extraTokenParams(value: Record<string, any>) {
+  get extraTokenParams(): Record<string, unknown> { return this._extraTokenParams; }
+  set extraTokenParams(value: Record<string, unknown>) {
     if (typeof value === 'object') {
       this._extraTokenParams = value;
     } else {

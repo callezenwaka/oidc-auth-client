@@ -2,13 +2,7 @@
 
 import { Log } from '../utils/Log.js';
 import { Global } from '../utils/Global.js';
-
-export interface StateStore {
-  set(key: string, value: string): Promise<void>;
-  get(key: string): Promise<string | null>;
-  remove(key: string): Promise<string | null>;
-  getAllKeys(): Promise<string[]>;
-}
+import type { StateStore } from '../types/storage.js';
 
 export class WebStorageStateStore implements StateStore {
   private _store: Storage;
