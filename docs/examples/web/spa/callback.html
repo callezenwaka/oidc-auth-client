@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signing in...</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <p id="status">Completing sign-in, please wait...</p>
+  </main>
+
+  <script type="module">
+    // Step 2: Exchange the auth code for tokens and store the user
+    import { UserManager } from '../../../../dist/index.js';
+
+    try {
+      await new UserManager({ response_type: 'code' }).signinRedirectCallback();
+      window.location.replace('/');
+    } catch (err) {
+      console.error('Callback error:', err);
+      document.getElementById('status').textContent = `Sign-in failed: ${err.message}`;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Silent Renew</title>
+</head>
+<body>
+  <script type="module">
+    // Step 4: Complete the silent token renewal inside the iframe
+    import { UserManager } from '../../../../dist/index.js';
+
+    await new UserManager({ response_type: 'code' }).signinSilentCallback();
+  </script>
+</body>
+</html>

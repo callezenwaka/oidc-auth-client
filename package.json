@@ -1,42 +1,62 @@
 {
-  "name": "oidc-client",
-  "version": "1.11.5",
-  "description": "OpenID Connect (OIDC) and OAuth 2.0 client library for JavaScript applications - Consolidated & Refactored",
-  "license": "Apache-2.0",
-  "author": {
-    "name": "Callis Ezenwaka",
-    "email": "callisezenwaka@outlook.com"
-  },
+  "name": "oidc-auth-client",
+  "version": "0.0.0",
+  "description": "OpenID Connect (OIDC) and OAuth 2.0 client library for JavaScript applications.",
   "engines": {
     "node": ">=20.9.0"
   },
   "type": "module",
-  "main": "index.js",
-  "types": "src/types/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage",
+    "test:package": "node --input-type=module --eval \"import('./dist/index.js').then(m => { if (!m.UserManager) throw new Error('Missing UserManager'); console.log('package OK'); })\"",
+    "docs": "typedoc",
+    "prepublishOnly": "npm run build && npm run test:run"
+  },
   "exports": {
     ".": {
-      "types": "./src/types/index.d.ts",
-      "import": "./index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
-    "./auth": "./src/auth/Client.js",
-    "./protocol": "./src/protocol/TokenService.js",
-    "./storage": "./src/storage/Storage.js",
-    "./utils": "./src/utils/Log.js"
+    "./auth": {
+      "types": "./dist/src/auth/Client.d.ts",
+      "import": "./dist/src/auth/Client.js"
+    },
+    "./protocol": {
+      "types": "./dist/src/protocol/TokenService.d.ts",
+      "import": "./dist/src/protocol/TokenService.js"
+    },
+    "./storage": {
+      "types": "./dist/src/storage/Storage.d.ts",
+      "import": "./dist/src/storage/Storage.js"
+    },
+    "./utils": {
+      "types": "./dist/src/utils/Log.d.ts",
+      "import": "./dist/src/utils/Log.js"
+    }
   },
-  "scripts": {
-    "test": "vitest",
-    "test:watch": "vitest --watch",
-    "test:coverage": "vitest run --coverage"
-  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
-    "base64-js": "^1.5.1",
-    "crypto-js": "^4.2.0",
-    "jsbn": "^1.1.0",
-    "jsdom": "^27.2.0"
+    "jose": "^6.2.2"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.0.15",
-    "vitest": "^4.0.15"
+    "@types/jsdom": "^28.0.1",
+    "@vitest/coverage-v8": "^4.1.4",
+    "jsdom": "^29.0.2",
+    "typedoc": "^0.28.19",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
   },
   "keywords": [
     "oidc",
@@ -63,11 +83,9 @@
     "type": "git",
     "url": "git+https://github.com/callezenwaka/oidc-client.git"
   },
-  "files": [
-    "src/",
-    "index.js",
-    "version.js",
-    "README.md",
-    "LICENSE"
-  ]
+  "author": {
+    "name": "Callis Ezenwaka",
+    "email": "callisezenwaka@outlook.com"
+  },
+  "license": "Apache-2.0"
 }

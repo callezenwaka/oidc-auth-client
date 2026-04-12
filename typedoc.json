@@ -1,0 +1,17 @@
+{
+  "entryPoints": ["index.ts"],
+  "out": "docs/api",
+  "name": "oidc-auth-client",
+  "includeVersion": false,
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "validation": {
+    "notExported": false
+  },
+  "plugin": [],
+  "navigationLinks": {
+    "GitHub": "https://github.com/callezenwaka/oidc-client"
+  }
+}

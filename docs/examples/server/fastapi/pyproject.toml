@@ -1,0 +1,15 @@
+[project]
+name = "fastapi-oidc-server"
+version = "1.0.0"
+description = "FastAPI OIDC resource server"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-jose[cryptography]>=3.3.0",
+    "httpx>=0.28.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

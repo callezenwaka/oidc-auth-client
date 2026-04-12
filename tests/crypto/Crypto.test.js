@@ -41,8 +41,8 @@ describe('crypto/JoseUtil', () => {
     expect(parsed.payload.name).toBe('John Doe');
   });
 
-  it('should hash string', () => {
-    const hash = JoseUtil.hashString('test', 'SHA256');
+  it('should hash string', async () => {
+    const hash = await JoseUtil.hashString('test', 'SHA256');
     expect(hash).toBeTypeOf('string');
     expect(hash.length).toBeGreaterThan(0);
   });
