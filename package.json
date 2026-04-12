@@ -75,13 +75,13 @@
     "browser",
     "client"
   ],
-  "homepage": "https://github.com/callezenwaka/oidc-client#readme",
+  "homepage": "https://github.com/callezenwaka/oidc-auth-client#readme",
   "bugs": {
-    "url": "https://github.com/callezenwaka/oidc-client/issues"
+    "url": "https://github.com/callezenwaka/oidc-auth-client/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/callezenwaka/oidc-client.git"
+    "url": "git+https://github.com/callezenwaka/oidc-auth-client.git"
   },
   "author": {
     "name": "Callis Ezenwaka",
