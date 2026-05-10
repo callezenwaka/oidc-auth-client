@@ -6,6 +6,7 @@ import { WebStorageStateStore } from '../storage/Storage.js';
 import { ResponseValidator } from '../protocol/ResponseValidator.js';
 import { MetadataService } from '../services/Http.js';
 import { RedirectNavigator, PopupNavigator, IFrameNavigator } from '../navigation/Navigator.js';
+import type { INavigator } from '../types/navigator.js';
 import { Global } from '../utils/Global.js';
 import { SigninRequest } from '../protocol/Requests.js';
 import type { OidcMetadata } from '../services/Http.js';
@@ -299,9 +300,9 @@ export interface UserManagerSettingsArgs extends OidcClientSettingsArgs {
   stopCheckSessionOnError?: boolean;
   query_status_response_type?: string;
   revokeAccessTokenOnSignout?: boolean;
-  redirectNavigator?: RedirectNavigator;
-  popupNavigator?: PopupNavigator;
-  iframeNavigator?: IFrameNavigator;
+  redirectNavigator?: INavigator;
+  popupNavigator?: INavigator;
+  iframeNavigator?: INavigator;
   userStore?: StateStore;
 }
 
@@ -325,9 +326,9 @@ export class UserManagerSettings extends OidcClientSettings {
   private _query_status_response_type: string;
   private _revokeAccessTokenOnSignout: boolean;
 
-  private _redirectNavigator: RedirectNavigator;
-  private _popupNavigator: PopupNavigator;
-  private _iframeNavigator: IFrameNavigator;
+  private _redirectNavigator: INavigator;
+  private _popupNavigator: INavigator;
+  private _iframeNavigator: INavigator;
   private _userStore: StateStore;
 
   constructor(settings: UserManagerSettingsArgs = {}) {
@@ -388,9 +389,9 @@ export class UserManagerSettings extends OidcClientSettings {
   get query_status_response_type(): string { return this._query_status_response_type; }
   get revokeAccessTokenOnSignout(): boolean { return this._revokeAccessTokenOnSignout; }
 
-  get redirectNavigator(): RedirectNavigator { return this._redirectNavigator; }
-  get popupNavigator(): PopupNavigator { return this._popupNavigator; }
-  get iframeNavigator(): IFrameNavigator { return this._iframeNavigator; }
+  get redirectNavigator(): INavigator { return this._redirectNavigator; }
+  get popupNavigator(): INavigator { return this._popupNavigator; }
+  get iframeNavigator(): INavigator { return this._iframeNavigator; }
 
   get userStore(): StateStore { return this._userStore; }
 }
