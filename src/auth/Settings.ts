@@ -2,7 +2,7 @@
 
 import { Log } from '../utils/Log.js';
 import { ClockService } from '../services/Timer.js';
-import { WebStorageStateStore } from '../storage/Storage.js';
+import { WebStorageStateStore, InMemoryWebStorage } from '../storage/Storage.js';
 import { ResponseValidator } from '../protocol/ResponseValidator.js';
 import { MetadataService } from '../services/Http.js';
 import { RedirectNavigator, PopupNavigator, IFrameNavigator } from '../navigation/Navigator.js';
@@ -137,7 +137,7 @@ export class OidcClientSettings {
     userInfoJwtIssuer = 'OP',
     mergeClaims = false,
     // other behavior
-    stateStore = new WebStorageStateStore(),
+    stateStore = new WebStorageStateStore({ store: Global.localStorage ?? new InMemoryWebStorage() }),
     ResponseValidatorCtor = ResponseValidator,
     MetadataServiceCtor = MetadataService,
     // extra query params
@@ -367,7 +367,7 @@ export class UserManagerSettings extends OidcClientSettings {
     this._popupNavigator = settings.popupNavigator || new PopupNavigator();
     this._iframeNavigator = settings.iframeNavigator || new IFrameNavigator();
 
-    this._userStore = settings.userStore || new WebStorageStateStore({ store: Global.sessionStorage });
+    this._userStore = settings.userStore || new WebStorageStateStore({ store: Global.sessionStorage ?? new InMemoryWebStorage() });
   }
 
   get popup_redirect_uri(): string | undefined { return this._popup_redirect_uri; }
