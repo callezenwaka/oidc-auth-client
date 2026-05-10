@@ -444,7 +444,7 @@ export class UserManager extends OidcClient {
   }
 
   signinRedirectCallback(url?: string): Promise<User> {
-    return this._signinEnd(url || this._redirectNavigator.url).then(user => {
+    return this._signinEnd(url || this._redirectNavigator.url!).then(user => {
       if (user.profile && user.profile.sub) {
         Log.info('UserManager.signinRedirectCallback: successful, signed in sub: ', user.profile.sub);
       } else {
@@ -772,7 +772,7 @@ export class UserManager extends OidcClient {
   }
 
   signoutRedirectCallback(url?: string): Promise<SignoutResponse> {
-    return this._signoutEnd(url || this._redirectNavigator.url).then(response => {
+    return this._signoutEnd(url || this._redirectNavigator.url!).then(response => {
       Log.info('UserManager.signoutRedirectCallback: successful');
       return response;
     });
@@ -807,7 +807,7 @@ export class UserManager extends OidcClient {
     }
 
     const delimiter = '?';
-    return this._popupNavigator.callback(url as string | undefined, keepOpen, delimiter).then(() => {
+    return this._popupNavigator.callback!(url as string | undefined, keepOpen, delimiter).then(() => {
       Log.info('UserManager.signoutPopupCallback: successful');
     });
   }
